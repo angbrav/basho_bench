@@ -100,13 +100,17 @@ new(Id) ->
                       [TargetIp, TargetPort, Reason])
     end.
 
+%%%===================================================================
+%%% Sets
+%%%===================================================================\
+
 run({set, insert}, _KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket,
                                              run_one_set=true}=State) ->
     case riakc_pb_socket:fetch_type(Pid, Bucket, ?DEFAULT_SET_KEY) of
         {ok, Set0} ->
             Val = ValueGen(),
             Set1 = riakc_set:add_element(Val, Set0),
-            update_type(Pid, Bucket, ?DEFAULT_SET_KEY, Set1, State);
+            update_type(Pid, Bucket, ?DEFAULT_SET_KEY, {set, Set1}, State);
         {error, {notfound, _}} ->
             {ok, State};
         {error, FetchReason} ->
@@ -127,7 +131,7 @@ run({set, insert}, _KeyGen, ValueGen,
             SetSize = riakc_set:size(Set0),
             if SetSize < MaxValsForPreloadSet ->
                     Set1 = riakc_set:add_element(Val, Set0),
-                    update_type(Pid, Bucket, SetKey, Set1, State,
+                    update_type(Pid, Bucket, SetKey, {set, Set1}, State,
                                State#state{last_preload_nth=NextNth});
                true -> {ok, State#state{last_preload_nth=NextNth}}
             end;
@@ -141,7 +145,13 @@ run({set, insert}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
     Val = ValueGen(),
     Set0 = riakc_set:new(),
     Set1 = riakc_set:add_element(Val, Set0),
-    update_type(Pid, Bucket, SetKey, Set1, State);
+    update_type(Pid, Bucket, SetKey, {set, Set1}, State);
+
+run({set, modify}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    SetKey = KeyGen(),
+    Val = ValueGen(),
+    SetFun = fun(S) -> riakc_set:add_element(Val, S) end,
+    modify_type(Pid, Bucket, SetKey, SetFun, State);
 
 %% Note: Make sure to not use sequential for keys when run
 run({set, batch_insert}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket,
@@ -153,7 +163,7 @@ run({set, batch_insert}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket,
                               Sets ++ [riakc_set:add_element(Elem, Set0)]
                          end, [], Members),
     State2 = State#state{last_key=SetKey},
-    update_type(Pid, Bucket, SetKey, lists:last(SetLast), State2);
+    update_type(Pid, Bucket, SetKey, {set, lists:last(SetLast)}, State2);
 
 run({set, read}, _KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket,
                                            run_one_set=true}=State) ->
@@ -169,15 +179,15 @@ run({set, read}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
 
 run({set, remove}, _KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket,
                                              run_one_set=true}=State) ->
-    fetch_action(Pid, Bucket, ?DEFAULT_SET_KEY, ValueGen, State, remove);
+    fetch_action(Pid, Bucket, ?DEFAULT_SET_KEY, ValueGen, State, remove_element);
 run({set, remove}, _KeyGen, ValueGen,
     #state{pid=Pid, bucket=Bucket, preload=true, preloaded_sets=PreloadedSets,
            preloaded_sets_num=PreloadedSetsNum}=State) ->
     SetKey = lists:nth(random:uniform(PreloadedSetsNum), PreloadedSets),
-    fetch_action(Pid, Bucket, SetKey, ValueGen, State, remove);
+    fetch_action(Pid, Bucket, SetKey, ValueGen, State, remove_element);
 run({set, remove}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
     SetKey = KeyGen(),
-    fetch_action(Pid, Bucket, SetKey, ValueGen, State, remove);
+    fetch_action(Pid, Bucket, SetKey, ValueGen, State, remove_element);
 
 run({set, is_element}, _KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket,
                                                  run_one_set=true}=State) ->
@@ -189,7 +199,77 @@ run({set, is_element}, _KeyGen, ValueGen,
     fetch_action(Pid, Bucket, SetKey, ValueGen, State, is_element);
 run({set, is_element}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
     SetKey = KeyGen(),
-    fetch_action(Pid, Bucket, SetKey, ValueGen, State, is_element).
+    fetch_action(Pid, Bucket, SetKey, ValueGen, State, is_element);
+
+%%%===================================================================
+%%% Maps
+%%%===================================================================
+
+run({map, set, insert}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    Val = ValueGen(),
+    Map = riakc_map:new(),
+    MapWSet = map_set(Map, Val),
+    update_type(Pid, Bucket, MapKey, {map, MapWSet}, State);
+
+run({map, set, modify}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    Val = ValueGen(),
+    MapFun = fun(M) -> map_set(M, Val) end,
+    modify_type(Pid, Bucket, MapKey, MapFun, State);
+
+run({map, register, insert}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    Val = ValueGen(),
+    Map = riakc_map:new(),
+    MapWReg = map_register(Map, Val),
+    update_type(Pid, Bucket, MapKey, {map, MapWReg}, State);
+
+run({map, register, modify}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    Val = ValueGen(),
+    MapFun = fun(M) -> map_register(M, Val) end,
+    modify_type(Pid, Bucket, MapKey, MapFun, State);
+
+run({map, flag, insert}, KeyGen, _ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    Map = riakc_map:new(),
+    MapWFlag = map_flag(Map),
+    update_type(Pid, Bucket, MapKey, {map, MapWFlag}, State);
+
+run({map, flag, modify}, KeyGen, _ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    MapFun = fun(M) -> map_flag(M) end,
+    modify_type(Pid, Bucket, MapKey, MapFun, State);
+
+run({map, counter, insert}, KeyGen, _ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    Map = riakc_map:new(),
+    MapWCnt = map_counter(Map),
+    update_type(Pid, Bucket, MapKey, {map, MapWCnt}, State);
+
+run({map, counter, modify}, KeyGen, _ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    MapFun = fun(M) -> map_counter(M) end,
+    modify_type(Pid, Bucket, MapKey, MapFun, State);
+
+run({map, map, insert}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    Val = ValueGen(),
+    Map = riakc_map:new(),
+    MapWMap = map_map(Map, Val),
+    update_type(Pid, Bucket, MapKey, {map, MapWMap}, State);
+
+run({map, map, modify}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    Val = ValueGen(),
+    MapFun = fun(M) -> map_map(M, Val) end,
+    modify_type(Pid, Bucket, MapKey, MapFun, State);
+
+run({map, read}, KeyGen, ValueGen, #state{pid=Pid, bucket=Bucket}=State) ->
+    MapKey = KeyGen(),
+    fetch_action(Pid, Bucket, MapKey, ValueGen, State, read).
+
 
 %%%===================================================================
 %%% Private
@@ -248,14 +328,14 @@ preload_sets(N, Pid, Bucket, StartBinSize) ->
                  Set0 = riakc_set:new(),
                  Set1 = riakc_set:add_element(crypto:rand_bytes(StartBinSize),
                                               Set0),
-            case update_type(Pid, Bucket, SetKey, Set1) of
-                {ok, _} ->
-                    ?INFO("~p created", [SetKey]),
-                    SetKey;
-                {error, Reason} ->
-                    ?ERROR("~p not created b/c ~p", [SetKey, Reason]),
-                    error
-            end;
+                 case update_type(Pid, Bucket, SetKey, {set, Set1}) of
+                     {ok, _} ->
+                         ?INFO("~p created", [SetKey]),
+                         SetKey;
+                     {error, Reason} ->
+                         ?ERROR("~p not created b/c ~p", [SetKey, Reason]),
+                         error
+                 end;
              _ ->
                  ?INFO("~p Already Loaded", [SetKey]),
                  SetKey
@@ -270,7 +350,7 @@ run_one_set(Pid, Bucket, StartBinSize) ->
 
             %% can't be unmodified
             Set1 = riakc_set:add_element(crypto:rand_bytes(StartBinSize), Set0),
-            case update_type(Pid, Bucket, ?DEFAULT_SET_KEY, Set1) of
+            case update_type(Pid, Bucket, ?DEFAULT_SET_KEY, {set, Set1}) of
                 {ok, _} ->
                     ?INFO("~p created", [?DEFAULT_SET_KEY]);
                 {error, Reason} ->
@@ -311,15 +391,15 @@ set_start_bin_size(VGTup) ->
 %% @private fetch helper for read, remove, is_element runs
 fetch_action(Pid, Bucket, Key, ValueGen, State, Action) ->
     case riakc_pb_socket:fetch_type(Pid, Bucket, Key) of
-        {ok, Set0} ->
+        {ok, DT0} ->
             case Action of
-                remove ->
+                remove_element ->
                     Val = ValueGen(),
-                    Set1 = riakc_set:del_element(Val, Set0),
-                    update_type(Pid, Bucket, Key, Set1, State);
+                    DT1 = riakc_set:del_element(Val, DT0),
+                    update_type(Pid, Bucket, Key, DT1, State);
                 is_element ->
                     Val = ValueGen(),
-                    riakc_set:is_element(Val, Set0),
+                    riakc_set:is_element(Val, DT0),
                     {ok, State};
                 _ ->
                     {ok, State}
@@ -330,15 +410,72 @@ fetch_action(Pid, Bucket, Key, ValueGen, State, Action) ->
             {error, {Reason, Key}, State}
     end.
 
-%% @private riac_pb_socket:udpate_type wrapper
-update_type(Pid, Bucket, Key, SetToOp) ->
-    update_type(Pid, Bucket, Key, SetToOp, no_state).
-update_type(Pid, Bucket, Key, SetToOp, State) ->
-    update_type(Pid, Bucket, Key, SetToOp, State, State).
-update_type(Pid, Bucket, Key, SetToOp, StateOnError, StateOnUpdate) ->
-    case riakc_pb_socket:update_type(Pid, Bucket, Key, riakc_set:to_op(SetToOp)) of
+%% @private riac_pb_socket:modify_type wrapper
+modify_type(Pid, Bucket, Key, Fun, State) ->
+    modify_type(Pid, Bucket, Key, Fun, State, State).
+modify_type(Pid, Bucket, Key, Fun, StateOnError, StateOnUpdate) ->
+    case riakc_pb_socket:modify_type(Pid, Fun, Bucket, Key, [create]) of
+        ok ->
+            {ok, StateOnUpdate};
+        {ok, _} ->
+            {ok, StateOnUpdate};
+        {error, Reason} ->
+            {error, {Reason, Key, modify_type}, StateOnError}
+    end.
+
+%% @private riac_pb_socket:update_type wrapper
+update_type(Pid, Bucket, Key, ToOp) ->
+    update_type(Pid, Bucket, Key, ToOp, no_state).
+update_type(Pid, Bucket, Key, ToOp, State) ->
+    update_type(Pid, Bucket, Key, ToOp, State, State).
+update_type(Pid, Bucket, Key, ToOp, StateOnError, StateOnUpdate) ->
+    case riakc_pb_socket:update_type(Pid, Bucket, Key, to_op(ToOp)) of
         ok ->
             {ok, StateOnUpdate};
         {error, Reason} ->
             {error, {Reason, Key, update_type}, StateOnError}
     end.
+
+%% @private Case-specific for Op
+to_op({set, ToOp}) ->
+    riakc_set:to_op(ToOp);
+to_op({map, ToOp}) ->
+    riakc_map:to_op(ToOp).
+
+%% @private Helpers for map operations
+
+map_counter(Map) ->
+    riakc_map:update(
+      {<<"69">>, counter},
+      fun(C) ->
+              riakc_counter:increment(1, C)
+      end, Map).
+
+map_flag(Map) ->
+    riakc_map:update(
+      {<<"familymattersandfullhouses">>, flag},
+      fun(F) ->
+              riakc_flag:disable(F)
+      end, Map).
+
+map_register(Map, Val) ->
+    riakc_map:update(
+      {<<"soup">>, register},
+      fun(R) ->
+              riakc_register:set(Val, R)
+      end, Map).
+
+map_set(Map, Val) ->
+    riakc_map:update(
+      {<<"justbirdtome">>, set},
+      fun(S) ->
+              riakc_set:add_element(Val, S)
+      end, Map).
+
+map_map(Map, Val) ->
+    riakc_map:update(
+      {<<"bad hobbits die hard">>, map},
+      fun(M) ->
+              map_register(M, Val)
+      end, Map).
+

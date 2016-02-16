@@ -48,11 +48,11 @@ run(read, KeyGen, _ValueGen, #state{nodes=Nodes, clock=Clock0, bucket=Bucket}=S0
             {error, Else}
     end;
 
-run(update, KeyGen, ValueGen, #state{nodes=Nodes, clock=Clock0, bucket=Bucket}=S0) ->
+run(update, KeyGen, _ValueGen, #state{nodes=Nodes, clock=Clock0, bucket=Bucket}=S0) ->
     Key = KeyGen(),
     BKey = {Bucket, Key},
     Node = lists:nth(random:uniform(length(Nodes)), Nodes), 
-    Result = rpc:call(Node, saturn_leaf, update, [BKey, ValueGen, Clock0]),
+    Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of
         {ok, Clock1} ->
             {ok, S0#state{clock=Clock1}};

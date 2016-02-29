@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -u
+set -e
+FAIL=0
+Counter=0
+nodes=`cat ./scripts/bench`
+for node in $nodes
+do
+    Command1="cd ./basho_bench && sudo sed -i -e \"s/$1./\" examples/saturn_rpc.config"
+    ssh -o ConnectTimeout=10 -t ubuntu@$node -i /home/mbravo/openstack-mbravo.pem ${Command1/localhost/$node} &
+done
+echo $Command1 done
+
+for job in `jobs -p`
+do
+    wait $job || let "FAIL+=1"
+done
+
+if [ "$FAIL" == "0" ];
+then
+echo "$Command1 finished." 
+else
+echo "Fail! ($FAIL)"
+fi

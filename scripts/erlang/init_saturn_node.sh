@@ -14,7 +14,7 @@ do
     NodeName="leafs$Counter@$node"
     let Id=$Counter-1
     #echo "$NodeName"
-    sudo erl -pa script -name stat@localhost -setcookie saturn_leaf -run init_saturn_node init $NodeName leafs $Id $LeafsN $Leafs $Internals -run init stop
+    sudo erl -pa script -name "stat@130.104.228.60" -setcookie saturn_leaf -run init_saturn_node init $NodeName leafs $Id $LeafsN $Leafs $Internals -run init stop
 done
 let Counter=0
 for node in $Internals
@@ -23,5 +23,5 @@ do
     let Id=$Id+1
     NodeName="internals$Counter@$node"
     #echo "$NodeName"
-    sudo erl -pa script -name stat@localhost -setcookie saturn_leaf -run init_saturn_node init $NodeName internals $Id $LeafsN $Leafs $Internals -run init stop
+    sudo erl -pa script -name "stat@130.104.228.60" -setcookie saturn_leaf -run init_saturn_node init $NodeName internals $Id $LeafsN $Leafs $Internals -run init stop
 done

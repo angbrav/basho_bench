@@ -5,7 +5,7 @@ then
     branch=$1
     Command1="cd ./basho_bench/ && git reset --hard && git fetch && git checkout $branch && git pull"
 else
-    Command1="cd ./basho_bench && git pull origin master"
+    Command1="cd ./basho_bench && git stash save --keep-index && git pull origin master"
 fi
 
 ./scripts/parallel_command.sh bench "$Command1"

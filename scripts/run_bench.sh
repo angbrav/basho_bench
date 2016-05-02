@@ -17,7 +17,7 @@ do
     let Index=Counter-1
     NodeName="leafs$Counter@${nodesArray[$Index]}"
     echo $NodeName
-    ./scripts/set_bench_dc.sh $node "{saturn_dcs_nodes.*/{saturn_dcs_nodes, [['$NodeName']]}"
+    ./scripts/set_bench_dc.sh $node "{saturn_dc_nodes.*/{saturn_dc_nodes, ['$NodeName']}"
 done
 
 Command1="cd ./basho_bench && sudo ./basho_bench examples/saturn_benchmarks_rpc.config"

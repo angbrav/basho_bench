@@ -176,7 +176,6 @@ get_bucket_exponential(LatenciesOrderedDcs, NumberDcs) ->
                             Max = math:pow(2, NumberDcs),
                             Upper = math:pow(2, (NumberDcs - Counter)) * 100,
                             Prob = trunc(Upper/Max),
-                            lager:info("Probability of ~p: ~p", [DC, Prob]),
                             case random:uniform(100) =< Prob of
                                 true ->
                                     {Counter + 1, [DC|List]};

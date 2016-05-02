@@ -53,17 +53,21 @@ new(Id) ->
 
     Cookie = basho_bench_config:get(saturn_cookie),
     true = erlang:set_cookie(node(), Cookie),
-    {ok, #state{node=Node,
-                clock=0,
-                mydc=MyDc,
-                number_keys=NumberKeys,
-                correlation=Correlation,
-                local_buckets=LocalBuckets,
-                remote_buckets=RemoteBuckets,
-                ordered_latencies=LatenciesOrdered,
-                total_dcs=NumberDcs,
-                buckets_map=BucketsMap,
-                id=Id}}.
+    
+    State = #state{node=Node,
+                   clock=0,
+                   mydc=MyDc,
+                   number_keys=NumberKeys,
+                   correlation=Correlation,
+                   local_buckets=LocalBuckets,
+                   remote_buckets=RemoteBuckets,
+                   ordered_latencies=LatenciesOrdered,
+                   total_dcs=NumberDcs,
+                   buckets_map=BucketsMap,
+                   id=Id},
+    %lager:info("Worker ~p state: ~p", [Id, State]),
+    %lager:info("Worker ~p latencies: ~p", [Id, LatenciesOrdered]),
+    {ok, State}.
 
 get_tree_from_file(Device, MyDc, Counter, OrderedList) ->
     case file:read_line(Device) of
@@ -80,11 +84,12 @@ get_tree_from_file(Device, MyDc, Counter, OrderedList) ->
         {ok, Line} ->
             case Counter of
                 MyDc ->
+                    %lager:info("my row: ~p", [Line]),
                     ListString = string:tokens(hd(string:tokens(Line,"\n")), ","),
-                    List = lists:foldl(fun(LatencyString, {Acc, DcId}) ->
-                                        {Latency, []} = string:to_integer(LatencyString),
-                                        {orddict:store(Latency, DcId, Acc), DcId+1}
-                                       end, {orddict:new(), 0}, ListString),
+                    {List, _} = lists:foldl(fun(LatencyString, {Acc, DcId}) ->
+                                                {Latency, []} = string:to_integer(LatencyString),
+                                                {orddict:store(Latency, DcId, Acc), DcId+1}
+                                            end, {orddict:new(), 0}, ListString),
                     get_tree_from_file(Device, MyDc, Counter+1, List);
                 _ ->
                     get_tree_from_file(Device, MyDc, Counter+1, OrderedList)
@@ -99,13 +104,14 @@ get_buckets_from_file(Device, MyDc, Local, Remote, Map) ->
             lager:error("Problem reading ~p file, reason: ~p", [friends_file, Reason]),
             {error, Reason};
         {ok, Line} ->
-            [BucketString, ReplicasString] = string:tokens(hd(string:tokens(Line,"\n")), ","),
+            [BucketString|ReplicasString] = string:tokens(hd(string:tokens(Line,"\n")), ","),
             {Bucket, []} = string:to_integer(BucketString),
             Replicas = lists:foldl(fun(Replica, Acc) ->
                                     {Int, []} = string:to_integer(Replica),
                                     [Int|Acc]
                                    end, [], ReplicasString),
-            true = ets:insert(Map, {lists:sort(Replicas)}, Bucket),
+            %lager:info("Inserted to ets: ~p, ~p", [lists:sort(Replicas), Bucket]),
+            true = ets:insert(Map, {lists:sort(Replicas), Bucket}),
             case lists:member(MyDc, Replicas) of
                 true ->
                     get_buckets_from_file(Device, MyDc, [Bucket|Local], Remote, Map);
@@ -114,12 +120,12 @@ get_buckets_from_file(Device, MyDc, Local, Remote, Map) ->
             end
     end.
 
-pick_local_bucket(proportional, [_MySelf, LatenciesOrderedDcs], MyDc, NumberDcs, BucketsMap) ->
+pick_local_bucket(proportional, [_MySelf|LatenciesOrderedDcs], MyDc, NumberDcs, BucketsMap) ->
     Group = get_bucket_proportional(LatenciesOrderedDcs, NumberDcs),
     [{_, Bucket}] = ets:lookup(BucketsMap, lists:sort([MyDc|Group])),
     {ok, Bucket};
 
-pick_local_bucket(exponential, [_MySelf, LatenciesOrderedDcs], MyDc, NumberDcs, BucketsMap) ->
+pick_local_bucket(exponential, [_MySelf|LatenciesOrderedDcs], MyDc, NumberDcs, BucketsMap) ->
     Group = get_bucket_exponential(LatenciesOrderedDcs, NumberDcs),
     [{_, Bucket}] = ets:lookup(BucketsMap, lists:sort([MyDc|Group])),
     {ok, Bucket}.
@@ -129,19 +135,19 @@ pick_local_bucket(uniform, MyBuckets) ->
     Bucket = lists:nth(Pos, MyBuckets),
     {ok, Bucket}.
 
-pick_remote_bucket(proportional, [_MySelf, LatenciesOrderedDcs], NumberDcs, BucketsMap) ->
-    case get_bucket_exponential(LatenciesOrderedDcs, NumberDcs) of
+pick_remote_bucket(proportional, [_MySelf|LatenciesOrderedDcs]=Latencies, NumberDcs, BucketsMap) ->
+    case get_bucket_proportional(LatenciesOrderedDcs, NumberDcs) of
         [] ->
-            pick_remote_bucket(proportional, LatenciesOrderedDcs, NumberDcs, BucketsMap);
+            pick_remote_bucket(proportional, Latencies, NumberDcs, BucketsMap);
         Group ->
             [{_, Bucket}] = ets:lookup(BucketsMap, lists:sort(Group)),
             {ok, Bucket}
     end;
 
-pick_remote_bucket(exponential, [_MySelf, LatenciesOrderedDcs], NumberDcs, BucketsMap) ->
+pick_remote_bucket(exponential, [_MySelf|LatenciesOrderedDcs]=Latencies, NumberDcs, BucketsMap) ->
     case get_bucket_exponential(LatenciesOrderedDcs, NumberDcs) of
         [] ->
-            pick_remote_bucket(exponential, LatenciesOrderedDcs, NumberDcs, BucketsMap);
+            pick_remote_bucket(exponential, Latencies, NumberDcs, BucketsMap);
         Group ->
             [{_, Bucket}] = ets:lookup(BucketsMap, lists:sort(Group)),
             {ok, Bucket}
@@ -153,29 +159,32 @@ pick_remote_bucket(uniform, RemoteBuckets) ->
     {ok, Bucket}.
 
 get_bucket_proportional(LatenciesOrderedDcs, NumberDcs) ->    
-    lists:foldl(fun({_Latency, DC}, {Counter, List}) ->
-                    Portion = trunc(100/NumberDcs),
-                    Prob = (NumberDcs-Counter)*Portion,
-                    case random:uniform(100) =< Prob of
-                        true ->
-                            {Counter + 1, [DC|List]};
-                        false ->
-                            {Counter + 1, List}
-                     end
-                end, {1, []}, LatenciesOrderedDcs).
+    {_, DCs} = lists:foldl(fun({_Latency, DC}, {Counter, List}) ->
+                            Portion = trunc(100/NumberDcs),
+                            Prob = (NumberDcs-Counter)*Portion,
+                            case random:uniform(100) =< Prob of
+                                true ->
+                                    {Counter + 1, [DC|List]};
+                                false ->
+                                    {Counter + 1, List}
+                            end
+                           end, {1, []}, LatenciesOrderedDcs),
+    DCs.
 
 get_bucket_exponential(LatenciesOrderedDcs, NumberDcs) ->    
-    lists:foldl(fun({_Latency, DC}, {Counter, List}) ->
-                    Max = math:pow(2, NumberDcs),
-                    Upper = math:pow(2, (NumberDcs - Counter)) + 100,
-                    Prob = trunc(Upper/Max),
-                    case random:uniform(100) =< Prob of
-                        true ->
-                            {Counter + 1, [DC|List]};
-                        false ->
-                            {Counter + 1, List}
-                     end
-                end, {1, []}, LatenciesOrderedDcs).
+    {_ ,DCs} = lists:foldl(fun({_Latency, DC}, {Counter, List}) ->
+                            Max = math:pow(2, NumberDcs),
+                            Upper = math:pow(2, (NumberDcs - Counter)) * 100,
+                            Prob = trunc(Upper/Max),
+                            lager:info("Probability of ~p: ~p", [DC, Prob]),
+                            case random:uniform(100) =< Prob of
+                                true ->
+                                    {Counter + 1, [DC|List]};
+                                false ->
+                                    {Counter + 1, List}
+                            end
+                           end, {1, []}, LatenciesOrderedDcs),
+    DCs.
 
 run(read, _KeyGen, _ValueGen, #state{node=Node,
                                      clock=Clock0,

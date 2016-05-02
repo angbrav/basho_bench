@@ -23,7 +23,7 @@
 
 new(Id) ->
     Nodes = basho_bench_config:get(saturn_dc_nodes),
-    Correlation = bacho_bench_config:get(saturn_correlation),
+    Correlation = basho_bench_config:get(saturn_correlation),
     NumberKeys = basho_bench_config:get(saturn_number_internalkeys),
     MyNode = basho_bench_config:get(saturn_mynode),
     MyDc = basho_bench_config:get(saturn_dc_id),

@@ -10,7 +10,7 @@ do
     let Counter=Counter+1
     NodeName="basho_bench$Counter@$node"
     Command2="erl -pa script -name $NodeName -setcookie saturn_leaf -run init stop"
-    ssh -o ConnectTimeout=10 -t ubuntu@$node -i /home/mbravo/openstack-mbravo.pem ${Command2/localhost/$node} &
+    ssh -o ConnectTimeout=10 -t ubuntu@$node -i /Users/bravogestoso/Projects/ec2-saturn ${Command2/localhost/$node} &
 done
 echo $Command2 done
 

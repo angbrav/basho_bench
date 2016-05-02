@@ -14,7 +14,7 @@ fi
 echo $command" for nodes:"$nodes 
 for node in $nodes
 do
-    ssh -o ConnectTimeout=10 -t ubuntu@$node -i /home/mbravo/openstack-mbravo.pem ${command/localhost/$node} & 
+    ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -t ubuntu@$node -i /Users/bravogestoso/Projects/ec2-saturn ${command/localhost/$node} & 
 done
 echo $command done
 

@@ -14,15 +14,15 @@ init([NodeString, TypeString, IdString, NLeafsString | ListOfNodes]) ->
 	        {ok, _} = rpc:call(Node, saturn_internal_sup, start_internal, [Port, Id]);
 	    leafs ->
 	        {ok, _} = rpc:call(Node, saturn_leaf_sup, start_leaf, [Port, Id]),
-	        true = tpc:call(Node, saturn_proxy_vnode, check_ready, [{check_myid_ready}])
+	        ok = rpc:call(Node, saturn_leaf_producer, check_ready, [Id])
     end,
     % This should eventually be done through a fiile.
-    Tree0 = dict:store(0, [-1, 300, 50], dict:new()).
-    Tree1 = dict:store(1, [300, -1, 70], Tree0). 
-    Tree2 = dict:store(2, [50, 70, -1], Tree1).
-    Groups0 = dict:store(1, [0, 1], dict:new()).
-    rpc:call(Node, groups_manager_serv, set_treedict, [Tree2, NLeafs]),
-    rpc:call(Node, groups_manager_serv, set_groupsdict,[Groups0]),
+    %Tree0 = dict:store(0, [-1, 300, 50], dict:new()).
+    %Tree1 = dict:store(1, [300, -1, 70], Tree0). 
+    %Tree2 = dict:store(2, [50, 70, -1], Tree1).
+    %Groups0 = dict:store(1, [0, 1], dict:new()).
+    %rpc:call(Node, groups_manager_serv, set_treedict, [Tree2, NLeafs]),
+    %rpc:call(Node, groups_manager_serv, set_groupsdict,[Groups0]),
     ping_all(Node, NodeNames).
 
 test1([_Node, _Type, _Id, NLeafs | Nodes]) ->

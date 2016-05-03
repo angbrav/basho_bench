@@ -56,8 +56,8 @@ new(Id) ->
     ok = ping_each(Nodes),
 
     case Id of
-        0->
-            timer:sleep(20000);
+        1 ->
+            timer:sleep(10000);
         _ ->
             noop
     end,

@@ -57,7 +57,7 @@ new(Id) ->
 
     case Id of
         1 ->
-            timer:sleep(10000);
+            timer:sleep(5000);
         _ ->
             noop
     end,

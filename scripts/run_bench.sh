@@ -5,7 +5,7 @@ then
     ./scripts/init_bench.sh
 fi
 
-./scripts/conf_bench.sh 2 100 exponential 10000 8 2 72 18
+./scripts/conf_bench.sh 1 100 exponential 10000 10 0 90 0
 
 Counter=0
 nodes=`cat ./scripts/bench`

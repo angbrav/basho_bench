@@ -54,6 +54,8 @@ new(Id) ->
     true = erlang:set_cookie(node(), Cookie),
 
     ok = ping_each(Nodes),
+
+    timer:sleep(10000),
     
     State = #state{node=Node,
                    clock=0,

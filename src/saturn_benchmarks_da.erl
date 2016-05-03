@@ -50,11 +50,10 @@ new(Id) ->
             ?FAIL_MSG("Failed to start net_kernel for ~p: ~p\n", [?MODULE, Reason])
     end,
     Node = lists:nth((Id rem length(Nodes)+1), Nodes),
-
-    ok = ping_each(Nodes),
-
     Cookie = basho_bench_config:get(saturn_cookie),
     true = erlang:set_cookie(node(), Cookie),
+
+    ok = ping_each(Nodes),
     
     State = #state{node=Node,
                    clock=0,

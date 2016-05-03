@@ -55,7 +55,12 @@ new(Id) ->
 
     ok = ping_each(Nodes),
 
-    timer:sleep(10000),
+    case Id of
+        0->
+            timer:sleep(10000);
+        _ ->
+            noop
+    end,
     
     State = #state{node=Node,
                    clock=0,

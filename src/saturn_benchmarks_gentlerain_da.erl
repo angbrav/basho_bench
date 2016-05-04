@@ -213,8 +213,8 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
-    Result = gen_server:call(server_name(Node), {read, BKey, {GST0, DT0}}, infinity),
+    Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
+    %Result = gen_server:call(server_name(Node), {read, BKey, {GST0, DT0}}, infinity),
     case Result of
         {ok, {_Value, DT1, GST1}} ->
             DT2 = max(DT1, DT0),
@@ -241,8 +241,8 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
-    Result = gen_server:call(server_name(Node), {read, BKey, {GST0, DT0}}, infinity),
+    Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
+    %Result = gen_server:call(server_name(Node), {read, BKey, {GST0, DT0}}, infinity),
     case Result of
         {ok, {_Value, DT1, GST1}} ->
             DT2 = max(DT1, DT0),
@@ -269,8 +269,8 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, DT0}, infinity),
-    %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
+    %Result = gen_server:call(server_name(Node), {update, BKey, value, DT0}, infinity),
+    Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of
         {ok, DT1} ->
             DT2 = max(DT1, DT0),
@@ -295,8 +295,8 @@ run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, DT0}, infinity),
-    %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
+    %Result = gen_server:call(server_name(Node), {update, BKey, value, DT0}, infinity),
+    Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of
         {ok, DT1} ->
             DT2 = max(DT1, DT0),

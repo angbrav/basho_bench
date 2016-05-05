@@ -211,7 +211,14 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
-    Result = gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity),
+    Result = try
+        gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity)
+    catch
+        _:_ ->
+            lager:info("**** ~p", [process_info(server_name(Node))]),
+            yellow_man
+    end,
+    
     %Result = gen_server:call(server_name(Node), {read, BKey, []}, infinity),
     case Result of
         {ok, {_Value, {Version, DepsVersion}}} ->

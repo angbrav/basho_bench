@@ -216,7 +216,8 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
         gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity)
     catch
         _:_ ->
-            lager:info("**** ~p", [process_info(server_name(Node))]),
+            Pid = global:whereis_name(server_name(Node)),
+            lager:info("**** ~p", [process_info(Pid)]),
             yellow_man
     end,
     

@@ -63,7 +63,7 @@ new(Id) ->
     end,
     
     State = #state{node=Node,
-                   deps=[],
+                   deps=dict:new(),
                    mydc=MyDc,
                    number_keys=NumberKeys,
                    correlation=Correlation,

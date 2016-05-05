@@ -211,8 +211,8 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
-    %Result = gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity),
-    Result = gen_server:call(server_name(Node), {read, BKey, []}, infinity),
+    Result = gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity),
+    %Result = gen_server:call(server_name(Node), {read, BKey, []}, infinity),
     case Result of
         {ok, {_Value, {Version, DepsVersion}}} ->
             Deps1 = insert_dep({BKey, Version}, Deps),
@@ -241,8 +241,8 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
-    %Result = gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity),
-    Result = gen_server:call(server_name(Node), {read, BKey, []}, infinity),
+    Result = gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity),
+    %Result = gen_server:call(server_name(Node), {read, BKey, []}, infinity),
     case Result of
         {ok, {_Value, {Version, DepsVersion}}} ->
             Deps1 = insert_dep({BKey, Version}, Deps),
@@ -271,8 +271,8 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, []}, infinity),
-    %Result = gen_server:call(server_name(Node), {update, BKey, value, dict:to_list(Deps)}, infinity),
+    %Result = gen_server:call(server_name(Node), {update, BKey, value, []}, infinity),
+    Result = gen_server:call(server_name(Node), {update, BKey, value, dict:to_list(Deps)}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of
         {ok, Version} ->
@@ -298,8 +298,8 @@ run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, []}, infinity),
-    %Result = gen_server:call(server_name(Node), {update, BKey, value, dict:to_list(Deps)}, infinity),
+    %Result = gen_server:call(server_name(Node), {update, BKey, value, []}, infinity),
+    Result = gen_server:call(server_name(Node), {update, BKey, value, dict:to_list(Deps)}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of
         {ok, Version} ->

@@ -216,7 +216,7 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
         gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity)
     catch
         _:_ ->
-            Pid = global:whereis_name(server_name(Node)),
+            Pid = rpc:call(Node, erlang, whereis, [saturn_client_receiver]),
             lager:info("**** ~p", [process_info(Pid)]),
             yellow_man
     end,
@@ -333,7 +333,8 @@ ping_each([Node | Rest]) ->
     end.
 
 server_name(Node)->
-    {global, list_to_atom(atom_to_list(Node) ++ atom_to_list(saturn_client_receiver))}.
+    {saturn_client_receiver, Node}.
+    %{global, list_to_atom(atom_to_list(Node) ++ atom_to_list(saturn_client_receiver))}.
 
 insert_dep({BKey, Version}, Deps) ->
     case dict:find(BKey, Deps) of

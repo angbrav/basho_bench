@@ -1,4 +1,4 @@
--module(saturn_benchmarks_cops_da).
+-module(saturn_benchmarks_cops_partial_da).
 
 -export([new/1,
          run/4]).
@@ -210,14 +210,16 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
+    %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
     Result = gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity),
+    %Result = gen_server:call(server_name(Node), {read, BKey, []}, infinity),
     case Result of
-        {ok, {_Value, {Version, _DepsVersion}}} ->
+        {ok, {_Value, {Version, DepsVersion}}} ->
             Deps1 = insert_dep({BKey, Version}, Deps),
-            %Deps2 = lists:foldl(fun(Dependency, Acc) ->
-             %                       insert_dep(Dependency, Acc)
-             %                   end, Deps1, DepsVersion),
-            {ok, S0#state{deps=Deps1}};
+            Deps2 = lists:foldl(fun(Dependency, Acc) ->
+                                    insert_dep(Dependency, Acc)
+                                end, Deps1, DepsVersion),
+            {ok, S0#state{deps=Deps2}};
         Else ->
             {error, Else}
     end;
@@ -242,12 +244,12 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
     Result = gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity),
     %Result = gen_server:call(server_name(Node), {read, BKey, []}, infinity),
     case Result of
-        {ok, {_Value, {Version, _DepsVersion}}} ->
+        {ok, {_Value, {Version, DepsVersion}}} ->
             Deps1 = insert_dep({BKey, Version}, Deps),
-            %Deps2 = lists:foldl(fun(Dependency, Acc) ->
-            %                        insert_dep(Dependency, Acc)
-            %                    end, Deps1, DepsVersion),
-            {ok, S0#state{deps=Deps1}};
+            Deps2 = lists:foldl(fun(Dependency, Acc) ->
+                                    insert_dep(Dependency, Acc)
+                                end, Deps1, DepsVersion),
+            {ok, S0#state{deps=Deps2}};
         Else ->
             {error, Else}
     end;
@@ -274,7 +276,7 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of
         {ok, Version} ->
-            Deps1 = insert_dep({BKey, Version}, dict:new()),
+            Deps1 = insert_dep({BKey, Version}, Deps),
             {ok, S0#state{deps=Deps1}};
         Else ->
             {error, Else}
@@ -301,7 +303,7 @@ run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of
         {ok, Version} ->
-            Deps1 = insert_dep({BKey, Version}, dict:new()),
+            Deps1 = insert_dep({BKey, Version}, Deps),
             {ok, S0#state{deps=Deps1}};
         Else ->
             {error, Else}

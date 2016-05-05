@@ -5,7 +5,7 @@ then
     ./scripts/init_bench.sh
 fi
 
-./scripts/conf_bench.sh 1 100 exponential 10000 10 0 90 0 30 saturn_benchmarks_da
+./scripts/conf_bench.sh 1 100 exponential 10000 10 0 90 0 30 saturn_benchmarks_gentlerain_da
 
 Counter=0
 nodes=`cat ./scripts/bench`

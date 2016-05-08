@@ -58,6 +58,7 @@ new(Id) ->
 
     case Id of
         1 ->
+            ok = rpc:call(Node, saturn_leaf, clean, []),
             timer:sleep(5000);
         _ ->
             noop

@@ -15,7 +15,7 @@ mkdir ./results/$Folder
 for node in $Nodes
 do
     mkdir ./results/$Folder/$node
-    scp -r -i /home/mbravo/openstack-mbravo.pem ubuntu@$node:basho_bench/tests/current/* ./results/$Folder/$node & 
+    scp -r -i /Users/bravogestoso/Projects/ec2-saturn ubuntu@$node:basho_bench/tests/current/* ./results/$Folder/$node & 
 done
 rm -rf ./results/current
 ln -s $Folder/ ./results/current

@@ -5,7 +5,7 @@ then
     ./scripts/init_bench.sh
 fi
 
-./scripts/conf_bench.sh 1 100 exponential 10000 10 0 90 0 30 saturn_benchmarks_gentlerain_da
+./scripts/conf_bench.sh 3 100 exponential 10000 10 0 90 0 12 saturn_benchmarks_cops_partial_da
 
 Counter=0
 nodes=`cat ./scripts/bench`
@@ -21,6 +21,9 @@ do
     ./scripts/set_bench_dc.sh $node "{saturn_dc_id.*/{saturn_dc_id, $Index}"
 done
 
-Command1="cd ./basho_bench && sudo ./basho_bench examples/saturn_benchmarks_rpc.config"
+Command1="sudo /usr/sbin/ntpdate -b ntp.ubuntu.com"
+./scripts/parallel_command.sh leafs "$Command1"
 
-./scripts/parallel_command.sh bench "$Command1"
+Command2="cd ./basho_bench && sudo ./basho_bench examples/saturn_benchmarks_rpc.config"
+
+./scripts/parallel_command.sh bench "$Command2"

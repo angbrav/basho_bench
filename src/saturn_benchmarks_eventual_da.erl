@@ -1,4 +1,4 @@
--module(saturn_benchmarks_cops_da).
+-module(saturn_benchmarks_eventual_da).
 
 -export([new/1,
          run/4]).
@@ -6,7 +6,7 @@
 -include("basho_bench.hrl").
 
 -record(state, {node,
-                deps,
+                clock,
                 mydc,
                 number_keys,
                 id,
@@ -57,13 +57,14 @@ new(Id) ->
 
     case Id of
         1 ->
+            ok = rpc:call(Node, saturn_leaf, clean, []),
             timer:sleep(5000);
         _ ->
             noop
     end,
     
     State = #state{node=Node,
-                   deps=dict:new(),
+                   clock=0,
                    mydc=MyDc,
                    number_keys=NumberKeys,
                    correlation=Correlation,
@@ -194,7 +195,7 @@ get_bucket_exponential(LatenciesOrderedDcs, NumberDcs) ->
     DCs.
 
 run(read, _KeyGen, _ValueGen, #state{node=Node,
-                                     deps=Deps,
+                                     clock=Clock0,
                                      number_keys=NumberKeys,
                                      correlation=Correlation,
                                      local_buckets=LocalBuckets,
@@ -210,20 +211,18 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity),
+    %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
+    Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     case Result of
-        {ok, {_Value, {Version, _DepsVersion}}} ->
-            Deps1 = insert_dep({BKey, Version}, Deps),
-            %Deps2 = lists:foldl(fun(Dependency, Acc) ->
-             %                       insert_dep(Dependency, Acc)
-             %                   end, Deps1, DepsVersion),
-            {ok, S0#state{deps=Deps1}};
+        {ok, {_Value, TimeStamp}} ->
+            Clock1 = max(TimeStamp, Clock0),
+            {ok, S0#state{clock=Clock1}};
         Else ->
             {error, Else}
     end;
 
 run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
-                                            deps=Deps,
+                                            clock=Clock0,
                                             number_keys=NumberKeys,
                                             correlation=Correlation,
                                             remote_buckets=RemoteBuckets,
@@ -238,29 +237,25 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
-    Result = gen_server:call(server_name(Node), {read, BKey, dict:to_list(Deps)}, infinity),
-    %Result = gen_server:call(server_name(Node), {read, BKey, []}, infinity),
+    Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
+    %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     case Result of
-        {ok, {_Value, {Version, _DepsVersion}}} ->
-            Deps1 = insert_dep({BKey, Version}, Deps),
-            %Deps2 = lists:foldl(fun(Dependency, Acc) ->
-            %                        insert_dep(Dependency, Acc)
-            %                    end, Deps1, DepsVersion),
-            {ok, S0#state{deps=Deps1}};
+        {ok, {_Value, TimeStamp}} ->
+            Clock1 = max(TimeStamp, Clock0),
+            {ok, S0#state{clock=Clock1}};
         Else ->
             {error, Else}
     end;
 
 run(update, _KeyGen, _ValueGen, #state{node=Node,
-                                       deps=Deps,
-                                       number_keys=NumberKeys,
-                                       correlation=Correlation,
-                                       ordered_latencies=OrderedLatencies,
-                                       buckets_map=BucketsMap,
-                                       mydc=MyDc,
-                                       total_dcs=NumberDcs,
-                                       local_buckets=LocalBuckets}=S0) ->
+                                      clock=Clock0,
+                                      number_keys=NumberKeys,
+                                      correlation=Correlation,
+                                      ordered_latencies=OrderedLatencies,
+                                      buckets_map=BucketsMap,
+                                      mydc=MyDc,
+                                      total_dcs=NumberDcs,
+                                      local_buckets=LocalBuckets}=S0) ->
     {ok, Bucket} = case Correlation of
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
@@ -269,25 +264,23 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    %Result = gen_server:call(server_name(Node), {update, BKey, value, []}, infinity),
-    Result = gen_server:call(server_name(Node), {update, BKey, value, dict:to_list(Deps)}, infinity),
-    %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
+    Result = gen_server:call(server_name(Node), {update, BKey, value, Clock0}, infinity),
+    %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of
-        {ok, Version} ->
-            Deps1 = insert_dep({BKey, Version}, dict:new()),
-            {ok, S0#state{deps=Deps1}};
+        {ok, Clock1} ->
+            {ok, S0#state{clock=Clock1}};
         Else ->
             {error, Else}
     end;
 
 run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
-                                              deps=Deps,
-                                              number_keys=NumberKeys,
-                                              correlation=Correlation,
-                                              remote_buckets=RemoteBuckets,
-                                              ordered_latencies=OrderedLatencies,
-                                              buckets_map=BucketsMap,
-                                              total_dcs=NumberDcs}=S0) ->
+                                             clock=Clock0,
+                                             number_keys=NumberKeys,
+                                             correlation=Correlation,
+                                             remote_buckets=RemoteBuckets,
+                                             ordered_latencies=OrderedLatencies,
+                                             buckets_map=BucketsMap,
+                                             total_dcs=NumberDcs}=S0) ->
     {ok, Bucket} = case Correlation of
         uniform ->
             pick_remote_bucket(uniform, RemoteBuckets);
@@ -296,13 +289,11 @@ run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    %Result = gen_server:call(server_name(Node), {update, BKey, value, []}, infinity),
-    Result = gen_server:call(server_name(Node), {update, BKey, value, dict:to_list(Deps)}, infinity),
-    %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
+    Result = gen_server:call(server_name(Node), {update, BKey, value, Clock0}, infinity),
+    %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of
-        {ok, Version} ->
-            Deps1 = insert_dep({BKey, Version}, dict:new()),
-            {ok, S0#state{deps=Deps1}};
+        {ok, Clock1} ->
+            {ok, S0#state{clock=Clock1}};
         Else ->
             {error, Else}
     end.
@@ -322,13 +313,4 @@ ping_each([Node | Rest]) ->
     end.
 
 server_name(Node)->
-    {saturn_client_receiver, Node}.
-    %{global, list_to_atom(atom_to_list(Node) ++ atom_to_list(saturn_client_receiver))}.
-
-insert_dep({BKey, Version}, Deps) ->
-    case dict:find(BKey, Deps) of
-        {ok, Value} ->
-            dict:store(BKey, max(Version, Value), Deps);
-        error ->
-            dict:store(BKey, Version, Deps)
-    end.
+    {global, list_to_atom(atom_to_list(Node) ++ atom_to_list(saturn_client_receiver))}.

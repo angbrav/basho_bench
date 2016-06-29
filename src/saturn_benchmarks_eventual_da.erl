@@ -15,6 +15,8 @@
                 remote_buckets,
                 ordered_latencies,
                 total_dcs,
+                remote_tx,
+                key_tx,
                 buckets_map}).
 
 %% ====================================================================
@@ -29,6 +31,8 @@ new(Id) ->
     MyDc = basho_bench_config:get(saturn_dc_id),
     BucketsFileName = basho_bench_config:get(saturn_buckets_file),
     TreeFileName = basho_bench_config:get(saturn_tree_file),
+    RemoteTx = basho_bench_config:get(saturntx_remote_percentage),
+    KeyTx = basho_bench_config:get(saturntx_n_key),
 
     {ok, BucketsFile} = file:open(BucketsFileName, [read]),
     Name = list_to_atom(integer_to_list(Id) ++ atom_to_list(buckets)),
@@ -66,6 +70,8 @@ new(Id) ->
     State = #state{node=Node,
                    clock=0,
                    mydc=MyDc,
+                   remote_tx=RemoteTx,
+                   key_tx=KeyTx,
                    number_keys=NumberKeys,
                    correlation=Correlation,
                    local_buckets=LocalBuckets,
@@ -194,6 +200,35 @@ get_bucket_exponential(LatenciesOrderedDcs, NumberDcs) ->
                            end, {1, []}, LatenciesOrderedDcs),
     DCs.
 
+get_bkeys(0, BKeys, _S0) ->
+    BKeys;
+
+get_bkeys(Rest, BKeys, S0=#state{remote_tx=PercentageRemote,
+                                 number_keys=NumberKeys,
+                                 correlation=Correlation,
+                                 local_buckets=LocalBuckets,
+                                 remote_buckets=RemoteBuckets,
+                                 ordered_latencies=OrderedLatencies,
+                                 buckets_map=BucketsMap,
+                                 mydc=MyDc,
+                                 total_dcs=NumberDcs}) ->
+    Type = case (PercentageRemote>random:uniform(100)) of
+        true -> remote;
+        false -> local
+    end,
+    {ok, Bucket} = case {Type, Correlation} of
+        {local, uniform} ->
+            pick_local_bucket(uniform, LocalBuckets);
+        {remote, uniform} ->
+            pick_remote_bucket(uniform, RemoteBuckets);
+        {local, _} ->
+            pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap);
+        {remote, _} ->
+            pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
+    end,
+    Key = random:uniform(NumberKeys),
+    get_bkeys(Rest-1, [{Bucket, Key}|BKeys], S0).
+
 run(read, _KeyGen, _ValueGen, #state{node=Node,
                                      clock=Clock0,
                                      number_keys=NumberKeys,
@@ -213,6 +248,19 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     BKey = {Bucket, Key},
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
+    case Result of
+        {ok, {_Value, TimeStamp}} ->
+            Clock1 = max(TimeStamp, Clock0),
+            {ok, S0#state{clock=Clock1}};
+        Else ->
+            {error, Else}
+    end;
+    
+run(read_tx, _KeyGen, _ValueGen, #state{node=Node,
+                                        key_tx=NKeys,
+                                        clock=Clock0}=S0) ->
+    BKeys = get_bkeys(NKeys, [], S0),
+    Result = gen_server:call(server_name(Node), {read_tx, BKeys, Clock0}, infinity),
     case Result of
         {ok, {_Value, TimeStamp}} ->
             Clock1 = max(TimeStamp, Clock0),
@@ -313,4 +361,5 @@ ping_each([Node | Rest]) ->
     end.
 
 server_name(Node)->
-    {global, list_to_atom(atom_to_list(Node) ++ atom_to_list(saturn_client_receiver))}.
+    {saturn_client_receiver, Node}.
+    %{global, list_to_atom(atom_to_list(Node) ++ atom_to_list(saturn_client_receiver))}.

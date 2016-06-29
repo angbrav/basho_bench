@@ -10,6 +10,9 @@ Read=$7
 ReadRemote=$8
 Clients=$9
 Driver=${10}
+ReadTx=${11}
+NKeysTx=${12}
+TxRemote=${13}
 
 ./scripts/set_bench_param.sh "{duration.*/{duration, $Duration}"
 ./scripts/set_bench_param.sh "{driver.*/{driver, $Driver}"
@@ -17,8 +20,10 @@ Driver=${10}
 ./scripts/set_bench_param.sh "{value_generator.*/{value_generator, {fixed_bin, $Value}}"
 ./scripts/set_bench_param.sh "{saturn_correlation.*/{saturn_correlation, $Correlation}"
 ./scripts/set_bench_param.sh "{saturn_number_internalkeys.*/{saturn_number_internalkeys, $Keys}"
-#./scripts/set_bench_param.sh "{operations.*/{operations, [{update, $Update},{remote_update, $UpdateRemote},{read, $Read}, {remote_read, $ReadRemote}]}"
+./scripts/set_bench_param.sh "{operations.*/{operations, [{update, $Update},{remote_update, $UpdateRemote},{read, $Read}, {remote_read, $ReadRemote}, {read_tx, $ReadTx}]}"
 #./scripts/set_bench_param.sh "{operations.*/{operations, [{update, $Update},{remote_update, $UpdateRemote},{read, $Read}]}"
-./scripts/set_bench_param.sh "{operations.*/{operations, [{update, $Update},{read, $Read}]}"
+#./scripts/set_bench_param.sh "{operations.*/{operations, [{update, $Update},{read, $Read}]}"
 #./scripts/set_bench_param.sh "{operations.*/{operations, [{read, $Read}]}"
 #/scripts/set_bench_param.sh "{operations.*/{operations, [{update, 1}]}"
+./scripts/set_bench_param.sh "{saturntx_n_key.*/{saturntx_n_key, $NKeysTx}"
+./scripts/set_bench_param.sh "{saturntx_remote_percentage.*/{saturntx_remote_percentage, $TxRemote}"

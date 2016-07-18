@@ -313,7 +313,8 @@ ping_each([Node | Rest]) ->
     end.
 
 server_name(Node)->
-    {global, list_to_atom(atom_to_list(Node) ++ atom_to_list(saturn_client_receiver))}.
+    %{global, list_to_atom(atom_to_list(Node) ++ atom_to_list(saturn_client_receiver))}.
+    {saturn_client_receiver, Node}.
 
 init_vectorclock(NumNodes) ->
     lists:foldl(fun(Id, Acc) ->

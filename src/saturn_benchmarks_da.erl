@@ -227,8 +227,17 @@ get_bkeys(Rest, BKeys, S0=#state{remote_tx=PercentageRemote,
         {remote, _} ->
             pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
     end,
-    Key = random:uniform(NumberKeys),
+    Key = generate_key(NumberKeys, Bucket, BKeys),
     get_bkeys(Rest-1, [{Bucket, Key}|BKeys], S0).
+
+generate_key(NumberKeys, Bucket, BKeys) -> 
+    Key = random:uniform(NumberKeys),
+    case lists:member({Bucket, Key}, BKeys) of
+        true ->
+            generate_key(NumberKeys, Bucket, BKeys);
+        false ->
+            Key
+    end.
 
 run(read, _KeyGen, _ValueGen, #state{node=Node,
                                      clock=Clock0,

@@ -1,6 +1,7 @@
 -module(init_saturn_node).
 -export([init/1,
          init_all/1,
+         init_all_txs/1,
          init_all_eventual/1,
          test1/1]).
 
@@ -47,6 +48,41 @@ init_all([NLeafsString | ListOfNodes]) ->
                             {ok, _} = rpc:call(NodeName, saturn_leaf_sup, start_leaf, [Port, Counter-1]),
                             ok = rpc:call(NodeName, saturn_leaf_producer, check_ready, [Counter-1]),
                             %io:format("Node: ~p, id: ~p", [NodeName, Counter-1]),
+                            Counter+1
+                    end
+                 end, 1, ListOfNodes).
+
+init_all_txs([NLeafsString | ListOfNodes]) ->
+    NLeafs = list_to_integer(NLeafsString),
+    NodeNames = generate_node_names(NLeafs, ListOfNodes),
+    Port = 4042,
+    lists:foldl(fun(Node, Counter) ->
+                    case (Counter > NLeafs) of
+                        true ->
+                            Id = integer_to_list(Counter - NLeafs),
+                            NodeName=list_to_atom("internals"++Id++"@"++Node),
+                            ping_all(NodeName, NodeNames),
+                            {ok, _} = rpc:call(NodeName, saturn_leaf_sup, start_internal, [Port, Counter-1]),
+                            %io:format("Node: ~p, id: ~p", [NodeName, Counter-1]),
+                            Counter+1;
+                        false ->
+                            Id = integer_to_list(Counter),
+                            NodeName=list_to_atom("leafs"++Id++"@"++Node),
+                            ping_all(NodeName, NodeNames),
+                            {ok, _} = rpc:call(NodeName, saturn_leaf_sup, start_leaf, [Port, Counter-1]),
+                            ok = rpc:call(NodeName, saturn_leaf_producer, check_ready, [Counter-1]),
+                            %io:format("Node: ~p, id: ~p", [NodeName, Counter-1]),
+                            Counter+1
+                    end
+                 end, 1, ListOfNodes),
+    lists:foldl(fun(Node, Counter) ->
+                    case (Counter > NLeafs) of
+                        true ->
+                            Counter+1;
+                        false ->
+                            Id = integer_to_list(Counter),
+                            NodeName=list_to_atom("leafs"++Id++"@"++Node),
+                            ok = rpc:call(NodeName, saturn_leaf_receiver, assign_convergers, [Counter-1, NLeafs]),
                             Counter+1
                     end
                  end, 1, ListOfNodes).

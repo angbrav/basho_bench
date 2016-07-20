@@ -1,7 +1,11 @@
 -module(stats).
 -export([dump_stats/1,
          cdf/1,
+         cdf_converger/1,
+         cdf_producer/1,
          cdf_eventual/1,
+         cdf_internal/1,
+         get_balancing/1,
          dump_stats_eventual/1]).
 
 dump_stats(ListOfNodes) ->
@@ -32,6 +36,38 @@ cdf_eventual([LeafString, FromString, TypeString | Leafs]) ->
     NodeName=list_to_atom("leafs"++integer_to_list(Leaf+1)++"@"++Node),
     {ok, Data} = rpc:call(NodeName, saturn_leaf, collect_stats, [From, list_to_atom(TypeString)]),
     io:format("From ~p to ~p (~p): ~p\n", [From, Leaf, TypeString, Data]).
+
+cdf_converger([LeafString, FromString, TypeString | Leafs]) ->
+    Leaf = list_to_integer(LeafString),
+    From = list_to_integer(FromString),
+    Node = lists:nth(Leaf+1, Leafs),
+    NodeName=list_to_atom("leafs"++integer_to_list(Leaf+1)++"@"++Node),
+    {ok, Data} = rpc:call(NodeName, saturn_leaf, collect_stats_arrival, [Leaf, From, list_to_atom(TypeString)]),
+    io:format("From ~p to ~p (~p): ~p\n", [From, Leaf, TypeString, Data]).
+
+cdf_producer([LeafString, FromString, TypeString | Leafs]) ->
+    Leaf = list_to_integer(LeafString),
+    From = list_to_integer(FromString),
+    Node = lists:nth(Leaf+1, Leafs),
+    NodeName=list_to_atom("leafs"++integer_to_list(Leaf+1)++"@"++Node),
+    {ok, Data} = rpc:call(NodeName, saturn_leaf, collect_stats_producer, [Leaf, From, list_to_atom(TypeString)]),
+    io:format("From ~p to ~p (~p): ~p\n", [From, Leaf, TypeString, Data]).
+
+cdf_internal([LeafString, InternalString, FromString, TypeString | Leafs]) ->
+    Leaf = list_to_integer(LeafString),
+    From = list_to_integer(FromString),
+    Internal = list_to_integer(InternalString),
+    Node = lists:nth(Leaf+1, Leafs),
+    NodeName=list_to_atom("leafs"++integer_to_list(Leaf+1)++"@"++Node),
+    {ok, Data} = rpc:call(NodeName, saturn_leaf, collect_stats_internal, [Internal, From, list_to_atom(TypeString)]),
+    io:format("From ~p to ~p (~p): ~p\n", [From, Leaf, TypeString, Data]).
+
+get_balancing([LeafString | Leafs]) ->
+    Leaf = list_to_integer(LeafString),
+    Node = lists:nth(Leaf+1, Leafs),
+    NodeName=list_to_atom("leafs"++integer_to_list(Leaf+1)++"@"++Node),
+    {ok, Data} = rpc:call(NodeName, saturn_leaf, get_total_ops, []),
+    io:format("Total ops at ~p: ~p\n", [Leaf, Data]).
     
 
 dump_stats_eventual(ListOfNodes) ->

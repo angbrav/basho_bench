@@ -296,6 +296,19 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
+run(write_tx, _KeyGen, _ValueGen, #state{node=Node,
+                                        key_tx=NKeys,
+                                        clock=Clock0}=S0) ->
+    BKeys = get_bkeys(NKeys, [], S0),
+    Pairs = [{BKey, value} || BKey <- BKeys],
+    Result = gen_server:call(server_name(Node), {write_tx, Pairs, Clock0}, infinity),
+    case Result of
+        {ok, Clock1} ->
+            {ok, S0#state{clock=Clock1}};
+        Else ->
+            {error, Else}
+    end;
+
 run(update, _KeyGen, _ValueGen, #state{node=Node,
                                       clock=Clock0,
                                       number_keys=NumberKeys,

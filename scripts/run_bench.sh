@@ -18,8 +18,10 @@ fi
 #ReadTx=${11}
 #NKeysTx=${12}
 #TxRemote=${13}
+#WriteTx=${14}
 
-./scripts/conf_bench.sh 3 100 exponential 10000 10 0 90 0 12 saturn_benchmarks_da 0 5 0
+
+./scripts/conf_bench.sh 3 100 exponential 10000 10 0 90 0 12 saturn_benchmarks_eventual_da 0 5 0 0
 
 Counter=0
 nodes=`cat ./scripts/bench`

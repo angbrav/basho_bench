@@ -225,7 +225,9 @@ get_bkeys(Rest, BKeys, S0=#state{remote_tx=PercentageRemote,
         {local, _} ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap);
         {remote, _} ->
-            pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
+            pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap);
+        {_, full} ->
+            {ok, trunc(math:pow(2,NumberDcs) - 2)}
     end,
     Key = generate_key(NumberKeys, Bucket, BKeys),
     get_bkeys(Rest-1, [{Bucket, Key}|BKeys], S0).
@@ -251,6 +253,8 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     {ok, Bucket} = case Correlation of
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
+        full ->
+            {ok, trunc(math:pow(2, NumberDcs) - 2)};
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
@@ -290,6 +294,8 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
     {ok, Bucket} = case Correlation of
         uniform ->
             pick_remote_bucket(uniform, RemoteBuckets);
+        full ->
+            {ok, trunc(math:pow(2, NumberDcs) - 2)};
         _ ->
             pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
     end,
@@ -330,6 +336,8 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
     {ok, Bucket} = case Correlation of
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
+        full ->
+            {ok, trunc(math:pow(2, NumberDcs) - 2)};
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
@@ -355,6 +363,8 @@ run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
     {ok, Bucket} = case Correlation of
         uniform ->
             pick_remote_bucket(uniform, RemoteBuckets);
+        full ->
+            {ok, trunc(math:pow(2, NumberDcs) - 2)};
         _ ->
             pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
     end,

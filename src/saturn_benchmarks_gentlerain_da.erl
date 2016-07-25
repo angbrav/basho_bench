@@ -219,10 +219,15 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
     Result = gen_server:call(server_name(Node), {read, BKey, {GST0, DT0}}, infinity),
     case Result of
-        {ok, {_Value, DT1, GST1}} ->
-            DT2 = max(DT1, DT0),
-            GST2 = max(GST1, GST0),
-            {ok, S0#state{dt=DT2, gst=GST2}};
+        {ok, {Value, DT1, GST1}} ->
+            case Value of
+                empty ->
+                    {error, empty};
+                _ ->
+                    DT2 = max(DT1, DT0),
+                    GST2 = max(GST1, GST0),
+                    {ok, S0#state{dt=DT2, gst=GST2}}
+            end;
         Else ->
             {error, Else}
     end;

@@ -221,12 +221,12 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     Result = gen_server:call(server_name(Node), {read, BKey, {GST0, DT0}}, infinity),
     case Result of
         {ok, {Value, DT1, GST1}} ->
+            DT2 = max(DT1, DT0),
+            GST2 = max(GST1, GST0),
             case Value of
                 empty ->
-                    {error, empty};
+                    {error, empty, S0#state{dt=DT2, gst=GST2}};
                 _ ->
-                    DT2 = max(DT1, DT0),
-                    GST2 = max(GST1, GST0),
                     {ok, S0#state{dt=DT2, gst=GST2}}
             end;
         Else ->

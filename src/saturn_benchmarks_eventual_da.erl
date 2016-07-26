@@ -323,7 +323,7 @@ run(write_tx, _KeyGen, ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(update, _KeyGen, _ValueGen, #state{node=Node,
+run(update, _KeyGen, ValueGen, #state{node=Node,
                                       clock=Clock0,
                                       number_keys=NumberKeys,
                                       correlation=Correlation,
@@ -340,7 +340,6 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
-    ValueGen = [value, value, value, value, value, value, values],
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
     Result = gen_server:call(server_name(Node), {update, BKey, ValueGen, Clock0}, infinity),

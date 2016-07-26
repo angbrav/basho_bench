@@ -58,6 +58,12 @@ new(Id) ->
     case Id of
         1 ->
             ok = rpc:call(Node, saturn_leaf, clean, []),
+            case Correlation of
+                full ->
+                    ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcs) - 2)], NumberKeys]);
+                _ ->
+                    ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
+            end,
             timer:sleep(5000);
         _ ->
             noop
@@ -216,9 +222,14 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
     Result = gen_server:call(server_name(Node), {read, BKey, GST0}, infinity),
     case Result of
-        {ok, {_Value, GST1}} ->
+        {ok, {Value, GST1}} ->
             GST2 = merge(GST0, GST1),
-            {ok, S0#state{gst=GST2}};
+            case Value of
+                empty ->
+                    {error, empty, S0#state{gst=GST2}};
+                _ ->
+                    {ok, S0#state{gst=GST2}}
+            end;
         Else ->
             {error, Else}
     end;

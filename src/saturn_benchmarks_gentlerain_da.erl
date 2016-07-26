@@ -59,7 +59,12 @@ new(Id) ->
     case Id of
         1 ->
             ok = rpc:call(Node, saturn_leaf, clean, []),
-            ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys]),
+            case Correlation of
+                full ->
+                    ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcs) - 2)], NumberKeys]);
+                _ ->
+                    ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
+            end,
             timer:sleep(5000);
         _ ->
             noop

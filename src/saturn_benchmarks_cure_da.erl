@@ -262,7 +262,7 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(update, _KeyGen, _ValueGen, #state{node=Node,
+run(update, _KeyGen, ValueGen, #state{node=Node,
                                       gst=GST0,
                                       number_keys=NumberKeys,
                                       correlation=Correlation,
@@ -281,7 +281,7 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, GST0}, infinity),
+    Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), GST0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of
         {ok, GST1} ->
@@ -290,7 +290,7 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
+run(remote_update, _KeyGen, ValueGen, #state{node=Node,
                                              gst=GST0,
                                              number_keys=NumberKeys,
                                              correlation=Correlation,
@@ -308,7 +308,7 @@ run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, GST0}, infinity),
+    Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), GST0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of
         {ok, GST1} ->

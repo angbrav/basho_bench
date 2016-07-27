@@ -311,11 +311,11 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(write_tx, _KeyGen, _ValueGen, #state{node=Node,
+run(write_tx, _KeyGen, ValueGen, #state{node=Node,
                                         key_tx=NKeys,
                                         clock=Clock0}=S0) ->
     BKeys = get_bkeys(NKeys, [], S0),
-    Pairs = [{BKey, value} || BKey <- BKeys],
+    Pairs = [{BKey, ValueGen()} || BKey <- BKeys],
     Result = gen_server:call(server_name(Node), {write_tx, Pairs, Clock0}, infinity),
     case Result of
         {ok, Clock1} ->
@@ -324,7 +324,7 @@ run(write_tx, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(update, _KeyGen, _ValueGen, #state{node=Node,
+run(update, _KeyGen, ValueGen, #state{node=Node,
                                       clock=Clock0,
                                       number_keys=NumberKeys,
                                       correlation=Correlation,
@@ -343,7 +343,7 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, Clock0}, infinity),
+    Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of
         {ok, Clock1} ->
@@ -352,7 +352,7 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
+run(remote_update, _KeyGen, ValueGen, #state{node=Node,
                                              clock=Clock0,
                                              number_keys=NumberKeys,
                                              correlation=Correlation,
@@ -370,7 +370,7 @@ run(remote_update, _KeyGen, _ValueGen, #state{node=Node,
     end,
     Key = random:uniform(NumberKeys),
     BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, Clock0}, infinity),
+    Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of
         {ok, Clock1} ->

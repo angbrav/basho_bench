@@ -8,7 +8,6 @@
 -record(state, {node,
                 clock,
                 mydc,
-                number_keys,
                 id,
                 correlation,
                 local_buckets,
@@ -26,7 +25,6 @@
 new(Id) ->
     Nodes = basho_bench_config:get(saturn_dc_nodes),
     Correlation = basho_bench_config:get(saturn_correlation),
-    NumberKeys = basho_bench_config:get(saturn_number_internalkeys),
     MyNode = basho_bench_config:get(saturn_mynode),
     MyDc = basho_bench_config:get(saturn_dc_id),
     BucketsFileName = basho_bench_config:get(saturn_buckets_file),
@@ -73,7 +71,6 @@ new(Id) ->
                    mydc=MyDc,
                    remote_tx=RemoteTx,
                    key_tx=KeyTx,
-                   number_keys=NumberKeys,
                    correlation=Correlation,
                    local_buckets=LocalBuckets,
                    remote_buckets=RemoteBuckets,
@@ -201,11 +198,10 @@ get_bucket_exponential(LatenciesOrderedDcs, NumberDcs) ->
                            end, {1, []}, LatenciesOrderedDcs),
     DCs.
 
-get_bkeys(0, BKeys, _S0) ->
+get_bkeys(0, _KeyGen, BKeys, _S0) ->
     BKeys;
 
-get_bkeys(Rest, BKeys, S0=#state{remote_tx=PercentageRemote,
-                                 number_keys=NumberKeys,
+get_bkeys(Rest, KeyGen, BKeys, S0=#state{remote_tx=PercentageRemote,
                                  correlation=Correlation,
                                  local_buckets=LocalBuckets,
                                  remote_buckets=RemoteBuckets,
@@ -229,21 +225,20 @@ get_bkeys(Rest, BKeys, S0=#state{remote_tx=PercentageRemote,
         {_, full} ->
             {ok, trunc(math:pow(2,NumberDcs) - 2)}
     end,
-    Key = generate_key(NumberKeys, Bucket, BKeys),
-    get_bkeys(Rest-1, [{Bucket, Key}|BKeys], S0).
+    Key = generate_key(KeyGen, Bucket, BKeys),
+    get_bkeys(Rest-1, KeyGen, [{Bucket, Key}|BKeys], S0).
 
-generate_key(NumberKeys, Bucket, BKeys) -> 
-    Key = random:uniform(NumberKeys),
+generate_key(KeyGen, Bucket, BKeys) -> 
+    Key = KeyGen(),
     case lists:member({Bucket, Key}, BKeys) of
         true ->
-            generate_key(NumberKeys, Bucket, BKeys);
+            generate_key(KeyGen, Bucket, BKeys);
         false ->
             Key
     end.
 
-run(read, _KeyGen, _ValueGen, #state{node=Node,
+run(read, KeyGen, _ValueGen, #state{node=Node,
                                      clock=Clock0,
-                                     number_keys=NumberKeys,
                                      correlation=Correlation,
                                      local_buckets=LocalBuckets,
                                      ordered_latencies=OrderedLatencies,
@@ -258,8 +253,7 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
-    Key = random:uniform(NumberKeys),
-    BKey = {Bucket, Key},
+    BKey = {Bucket, KeyGen()},
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     case Result of
@@ -270,10 +264,10 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(read_tx, _KeyGen, _ValueGen, #state{node=Node,
+run(read_tx, KeyGen, _ValueGen, #state{node=Node,
                                         key_tx=NKeys,
                                         clock=Clock0}=S0) ->
-    BKeys = get_bkeys(NKeys, [], S0),
+    BKeys = get_bkeys(NKeys, KeyGen, [], S0),
     Result = gen_server:call(server_name(Node), {read_tx, BKeys, Clock0}, infinity),
     case Result of
         {ok, {_Value, TimeStamp}} ->
@@ -283,9 +277,8 @@ run(read_tx, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
+run(remote_read, KeyGen, _ValueGen, #state{node=Node,
                                             clock=Clock0,
-                                            number_keys=NumberKeys,
                                             correlation=Correlation,
                                             remote_buckets=RemoteBuckets,
                                             ordered_latencies=OrderedLatencies,
@@ -299,8 +292,7 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
         _ ->
             pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
     end,
-    Key = random:uniform(NumberKeys),
-    BKey = {Bucket, Key},
+    BKey = {Bucket, KeyGen()},
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     case Result of
@@ -311,10 +303,10 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(write_tx, _KeyGen, ValueGen, #state{node=Node,
+run(write_tx, KeyGen, ValueGen, #state{node=Node,
                                         key_tx=NKeys,
                                         clock=Clock0}=S0) ->
-    BKeys = get_bkeys(NKeys, [], S0),
+    BKeys = get_bkeys(NKeys, KeyGen, [], S0),
     Pairs = [{BKey, ValueGen()} || BKey <- BKeys],
     Result = gen_server:call(server_name(Node), {write_tx, Pairs, Clock0}, infinity),
     case Result of
@@ -324,9 +316,8 @@ run(write_tx, _KeyGen, ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(update, _KeyGen, _ValueGen, #state{node=Node,
+run(update, KeyGen, ValueGen, #state{node=Node,
                                       clock=Clock0,
-                                      number_keys=NumberKeys,
                                       correlation=Correlation,
                                       ordered_latencies=OrderedLatencies,
                                       buckets_map=BucketsMap,
@@ -341,9 +332,8 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
-    Key = random:uniform(NumberKeys),
-    BKey = {Bucket, Key},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, Clock0}, infinity),
+    BKey = {Bucket, KeyGen()},
+    Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of
         {ok, Clock1} ->
@@ -352,9 +342,8 @@ run(update, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(remote_update, _KeyGen, ValueGen, #state{node=Node,
+run(remote_update, KeyGen, ValueGen, #state{node=Node,
                                              clock=Clock0,
-                                             number_keys=NumberKeys,
                                              correlation=Correlation,
                                              remote_buckets=RemoteBuckets,
                                              ordered_latencies=OrderedLatencies,
@@ -368,8 +357,7 @@ run(remote_update, _KeyGen, ValueGen, #state{node=Node,
         _ ->
             pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
     end,
-    Key = random:uniform(NumberKeys),
-    BKey = {Bucket, Key},
+    BKey = {Bucket, KeyGen()},
     Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of

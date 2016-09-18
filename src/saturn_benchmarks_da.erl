@@ -253,7 +253,9 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
-    BKey = {Bucket, KeyGen()},
+    Key = random:uniform(10000),
+    BKey = {Bucket, Key},
+    %BKey = {Bucket, KeyGen()},
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     case Result of
@@ -332,7 +334,9 @@ run(update, KeyGen, ValueGen, #state{node=Node,
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
-    BKey = {Bucket, KeyGen()},
+    Key = random:uniform(10000),
+    BKey = {Bucket, Key},
+    %BKey = {Bucket, KeyGen()},
     Result = gen_server:call(server_name(Node), {update, BKey, value, Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of

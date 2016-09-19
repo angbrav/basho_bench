@@ -337,7 +337,7 @@ run(update, KeyGen, ValueGen, #state{node=Node,
     Key = random:uniform(10000),
     BKey = {Bucket, Key},
     %BKey = {Bucket, KeyGen()},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, Clock0}, infinity),
+    Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of
         {ok, Clock1} ->
@@ -362,7 +362,7 @@ run(remote_update, KeyGen, ValueGen, #state{node=Node,
             pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
     end,
     BKey = {Bucket, KeyGen()},
-    Result = gen_server:call(server_name(Node), {update, BKey, value, Clock0}, infinity),
+    Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
     case Result of
         {ok, Clock1} ->

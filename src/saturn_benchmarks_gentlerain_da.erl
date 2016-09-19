@@ -63,7 +63,8 @@ new(Id) ->
                 full ->
                     ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcs) - 2)], NumberKeys]);
                 _ ->
-                    ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
+                    noop
+                    %ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
             end,
             timer:sleep(5000);
         _ ->

@@ -63,8 +63,8 @@ new(Id) ->
                 full ->
                     ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcs) - 2)], NumberKeys]);
                 _ ->
-                    noop
-                    %ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
+                    %noop
+                    ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
             end,
             timer:sleep(5000);
         _ ->
@@ -231,8 +231,8 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
             GST2 = max(GST1, GST0),
             case Value of
                 empty ->
-                    {ok, S0#state{dt=DT2, gst=GST2}};
-                    %{error, empty, S0#state{dt=DT2, gst=GST2}};
+                    %{ok, S0#state{dt=DT2, gst=GST2}};
+                    {error, empty, S0#state{dt=DT2, gst=GST2}};
                 _ ->
                     {ok, S0#state{dt=DT2, gst=GST2}}
             end;

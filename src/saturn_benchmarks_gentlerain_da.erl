@@ -231,7 +231,8 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
             GST2 = max(GST1, GST0),
             case Value of
                 empty ->
-                    {error, empty, S0#state{dt=DT2, gst=GST2}};
+                    {ok, S0#state{dt=DT2, gst=GST2}};
+                    %{error, empty, S0#state{dt=DT2, gst=GST2}};
                 _ ->
                     {ok, S0#state{dt=DT2, gst=GST2}}
             end;

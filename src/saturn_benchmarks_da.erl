@@ -294,7 +294,9 @@ run(remote_read, KeyGen, _ValueGen, #state{node=Node,
         _ ->
             pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
     end,
-    BKey = {Bucket, KeyGen()},
+    Key = random:uniform(10000),
+    BKey = {Bucket, Key},
+    %BKey = {Bucket, KeyGen()},
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     case Result of

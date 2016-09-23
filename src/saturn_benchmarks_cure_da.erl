@@ -62,7 +62,8 @@ new(Id) ->
                 full ->
                     ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcs) - 2)], NumberKeys]);
                 _ ->
-                    ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
+                    noop
+                    %ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
             end,
             timer:sleep(5000);
         _ ->
@@ -200,9 +201,9 @@ get_bucket_exponential(LatenciesOrderedDcs, NumberDcs) ->
                            end, {1, []}, LatenciesOrderedDcs),
     DCs.
 
-run(read, _KeyGen, _ValueGen, #state{node=Node,
+run(read, KeyGen, _ValueGen, #state{node=Node,
                                      gst=GST0,
-                                     number_keys=NumberKeys,
+                                     number_keys=_NumberKeys,
                                      correlation=Correlation,
                                      local_buckets=LocalBuckets,
                                      ordered_latencies=OrderedLatencies,
@@ -217,8 +218,8 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
-    Key = random:uniform(NumberKeys),
-    BKey = {Bucket, Key},
+    %Key = random:uniform(NumberKeys),
+    BKey = {Bucket, KeyGen()},
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
     Result = gen_server:call(server_name(Node), {read, BKey, GST0}, infinity),
     case Result of
@@ -226,7 +227,8 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
             GST2 = merge(GST0, GST1),
             case Value of
                 empty ->
-                    {error, empty, S0#state{gst=GST2}};
+                    {ok, S0#state{gst=GST2}};
+                    %{error, empty, S0#state{gst=GST2}};
                 _ ->
                     {ok, S0#state{gst=GST2}}
             end;
@@ -234,9 +236,9 @@ run(read, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
+run(remote_read, KeyGen, _ValueGen, #state{node=Node,
                                             gst=GST0,
-                                            number_keys=NumberKeys,
+                                            number_keys=_NumberKeys,
                                             correlation=Correlation,
                                             remote_buckets=RemoteBuckets,
                                             ordered_latencies=OrderedLatencies,
@@ -250,8 +252,8 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
         _ ->
             pick_remote_bucket(Correlation, OrderedLatencies, NumberDcs, BucketsMap)
     end,
-    Key = random:uniform(NumberKeys),
-    BKey = {Bucket, Key},
+    %Key = random:uniform(NumberKeys),
+    BKey = {Bucket, KeyGen()},
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
     Result = gen_server:call(server_name(Node), {read, BKey, GST0}, infinity),
     case Result of
@@ -262,9 +264,9 @@ run(remote_read, _KeyGen, _ValueGen, #state{node=Node,
             {error, Else}
     end;
 
-run(update, _KeyGen, ValueGen, #state{node=Node,
+run(update, KeyGen, ValueGen, #state{node=Node,
                                       gst=GST0,
-                                      number_keys=NumberKeys,
+                                      number_keys=_NumberKeys,
                                       correlation=Correlation,
                                       ordered_latencies=OrderedLatencies,
                                       buckets_map=BucketsMap,
@@ -279,8 +281,8 @@ run(update, _KeyGen, ValueGen, #state{node=Node,
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
-    Key = random:uniform(NumberKeys),
-    BKey = {Bucket, Key},
+    %Key = random:uniform(NumberKeys),
+    BKey = {Bucket, KeyGen()},
     Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), GST0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of

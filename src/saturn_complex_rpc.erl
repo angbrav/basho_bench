@@ -23,6 +23,7 @@
 
 new(Id) ->
     Nodes = basho_bench_config:get(saturn_dc_nodes),
+    [Receiver] = basho_bench_config:get(saturn_dc_receiver),
     NumberKeys = basho_bench_config:get(saturn_number_internalkeys),
     MyNode = basho_bench_config:get(saturn_mynode),
     MyDc = basho_bench_config:get(saturn_dc_id),
@@ -46,6 +47,7 @@ new(Id) ->
     ok = get_friends_from_file(GraphFile, Friends, Members),
     file:close(GraphFile),
 
+
     case net_kernel:start(MyNode) of
         {ok, _} ->
             ?INFO("Net kernel started as ~p\n", [node()]);
@@ -58,6 +60,17 @@ new(Id) ->
 
     Cookie = basho_bench_config:get(saturn_cookie),
     true = erlang:set_cookie(node(), Cookie),
+
+    ok = ping_each([Receiver|Nodes]),
+
+    case Id of
+        1 ->
+            ok = rpc:call(Nodes, saturn_leaf, clean, [MyDc]),
+            timer:sleep(5000);
+        _ ->
+            noop
+    end,
+
     {ok, #state{nodes=Nodes,
                 clocks=Clocks,
                 mydc=MyDc,
@@ -130,7 +143,7 @@ get_friends_from_file(Device, Table, Locals0) ->
             end
     end.
 
-run(read, _KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters, friends=Graph, total_buckets=TotalBuckets, number_keys=NumberKeys}=S0) ->
+run(read, KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters, friends=Graph, total_buckets=TotalBuckets, number_keys=_NumberKeys}=S0) ->
     {ok, Id} = get_id(Masters),
     Op = random:uniform(9821),
     case Op > 1756 of
@@ -143,11 +156,11 @@ run(read, _KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters
         true ->
             Bucket = random:uniform(TotalBuckets)
     end,
-    Key = random:uniform(NumberKeys),
-    BKey = {Bucket, Key},
+    %Key = random:uniform(NumberKeys),
+    BKey = {Bucket, KeyGen()},
     Node = lists:nth(random:uniform(length(Nodes)), Nodes), 
     [{Id, Clock0}] = ets:lookup(Clocks, Id),
-    Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
+    Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     case Result of
         {ok, {_Value, TimeStamp}} ->
             Clock1 = max(TimeStamp, Clock0),
@@ -157,7 +170,7 @@ run(read, _KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters
             {error, Else}
     end;
 
-run(update, _KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters, friends=Graph, number_keys=NumberKeys}=S0) ->
+run(update, KeyGen, ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters, friends=Graph, number_keys=_NumberKeys}=S0) ->
     {ok, Id} = get_id(Masters),
     Op = random:uniform(179),
     case Op > 14 of
@@ -166,11 +179,11 @@ run(update, _KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Maste
         true ->
             {ok, Bucket} = pick_friend(Graph, Id)
     end,
-    Key = random:uniform(NumberKeys),
-    BKey = {Bucket, Key},
+    %Key = random:uniform(NumberKeys),
+    BKey = {Bucket, KeyGen()},
     Node = lists:nth(random:uniform(length(Nodes)), Nodes), 
     [{Id, Clock0}] = ets:lookup(Clocks, Id),
-    Result = rpc:call(Node, saturn_leaf, update, [BKey, value, Clock0]),
+    Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), Clock0}, infinity),
     case Result of
         {ok, Clock1} ->
             true = ets:insert(Clocks, {Id, Clock1}), 
@@ -178,6 +191,24 @@ run(update, _KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Maste
         Else ->
             {error, Else}
     end.
+
+
+%% ====================================================================
+%% Internal functions
+%% ====================================================================
+
+ping_each([]) ->
+    ok;
+ping_each([Node | Rest]) ->
+    case net_adm:ping(Node) of
+        pong ->
+            ping_each(Rest);
+        pang ->
+            ?FAIL_MSG("Failed to ping node ~p\n", [Node])
+    end.
+
+server_name(Node)->
+    {saturn_client_receiver, Node}.
 
 get_id(Masters) ->
     case ets:lookup(Masters, length) of

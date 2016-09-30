@@ -5,10 +5,9 @@
 
 -include("basho_bench.hrl").
 
--record(state, { nodes,
+-record(state, { node,
                  clocks,
                  mydc,
-                 number_keys,
                  masters,
                  concurrent,
                  friends,
@@ -24,7 +23,6 @@
 new(Id) ->
     Nodes = basho_bench_config:get(saturn_dc_nodes),
     [Receiver] = basho_bench_config:get(saturn_dc_receiver),
-    NumberKeys = basho_bench_config:get(saturn_number_internalkeys),
     MyNode = basho_bench_config:get(saturn_mynode),
     MyDc = basho_bench_config:get(saturn_dc_id),
     TotalBuckets = basho_bench_config:get(saturn_total_buckets),
@@ -57,7 +55,7 @@ new(Id) ->
         {error, Reason} ->
             ?FAIL_MSG("Failed to start net_kernel for ~p: ~p\n", [?MODULE, Reason])
     end,
-
+    Node = lists:nth((Id rem length(Nodes)+1), Nodes),
     Cookie = basho_bench_config:get(saturn_cookie),
     true = erlang:set_cookie(node(), Cookie),
 
@@ -65,16 +63,15 @@ new(Id) ->
 
     case Id of
         1 ->
-            ok = rpc:call(Nodes, saturn_leaf, clean, [MyDc]),
+            ok = rpc:call(Node, saturn_leaf, clean, [MyDc]),
             timer:sleep(5000);
         _ ->
             noop
     end,
 
-    {ok, #state{nodes=Nodes,
+    {ok, #state{node=Node,
                 clocks=Clocks,
                 mydc=MyDc,
-                number_keys=NumberKeys,
                 masters=Masters,
                 concurrent=Concurrent,
                 friends=Friends,
@@ -143,7 +140,7 @@ get_friends_from_file(Device, Table, Locals0) ->
             end
     end.
 
-run(read, KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters, friends=Graph, total_buckets=TotalBuckets, number_keys=_NumberKeys}=S0) ->
+run(read, KeyGen, _ValueGen, #state{node=Node, clocks=Clocks, masters=Masters, friends=Graph, total_buckets=TotalBuckets}=S0) ->
     {ok, Id} = get_id(Masters),
     Op = random:uniform(9821),
     case Op > 1756 of
@@ -158,7 +155,6 @@ run(read, KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters,
     end,
     %Key = random:uniform(NumberKeys),
     BKey = {Bucket, KeyGen()},
-    Node = lists:nth(random:uniform(length(Nodes)), Nodes), 
     [{Id, Clock0}] = ets:lookup(Clocks, Id),
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     case Result of
@@ -170,7 +166,7 @@ run(read, KeyGen, _ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters,
             {error, Else}
     end;
 
-run(update, KeyGen, ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters, friends=Graph, number_keys=_NumberKeys}=S0) ->
+run(update, KeyGen, ValueGen, #state{node=Node, clocks=Clocks, masters=Masters, friends=Graph}=S0) ->
     {ok, Id} = get_id(Masters),
     Op = random:uniform(179),
     case Op > 14 of
@@ -181,7 +177,6 @@ run(update, KeyGen, ValueGen, #state{nodes=Nodes, clocks=Clocks, masters=Masters
     end,
     %Key = random:uniform(NumberKeys),
     BKey = {Bucket, KeyGen()},
-    Node = lists:nth(random:uniform(length(Nodes)), Nodes), 
     [{Id, Clock0}] = ets:lookup(Clocks, Id),
     Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), Clock0}, infinity),
     case Result of

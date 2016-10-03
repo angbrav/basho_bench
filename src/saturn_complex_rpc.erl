@@ -59,8 +59,14 @@ new(Id) ->
     Cookie = basho_bench_config:get(saturn_cookie),
     true = erlang:set_cookie(node(), Cookie),
 
-    ok = ping_each([Receiver|Nodes]),
+    ok = ping_each(Nodes),
 
+    case net_adm:ping(Receiver) of
+        pong ->
+            noop;
+        pang ->
+            ?INFO("Failed to ping ~p\n", [Receiver])
+    end,
     case Id of
         1 ->
             ok = rpc:call(Node, saturn_leaf, clean, [MyDc]),

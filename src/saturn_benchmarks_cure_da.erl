@@ -256,7 +256,7 @@ run(remote_read, KeyGen, _ValueGen, #state{node=Node,
     %Key = random:uniform(NumberKeys),
     BKey = {Bucket, KeyGen()},
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, {GST0, DT0}]),
-    lager:info("Clock being sent with reads: ~p", [dict:to_list(GST0)]),
+    %lager:info("Clock being sent with reads: ~p", [dict:to_list(GST0)]),
     Result = gen_server:call(server_name(Node), {read, BKey, GST0}, infinity),
     case Result of
         {ok, {_Value, GST1}} ->
@@ -285,7 +285,7 @@ run(update, KeyGen, ValueGen, #state{node=Node,
     end,
     %Key = random:uniform(NumberKeys),
     BKey = {Bucket, KeyGen()},
-    lager:info("Clock being sent with updates: ~p", [dict:to_list(GST0)]),
+    %lager:info("Clock being sent with updates: ~p", [dict:to_list(GST0)]),
     Result = gen_server:call(server_name(Node), {update, BKey, ValueGen(), GST0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, update, [BKey, value, DT0]),
     case Result of

@@ -157,7 +157,7 @@ run(read, KeyGen, _ValueGen, #state{node=Node, clocks=Clocks, masters=Masters, f
     [{Id, {GST0, DT0}}] = ets:lookup(Clocks, Id),
     Result = gen_server:call(server_name(Node), {read, BKey, {GST0, DT0}}, infinity),
     case Result of
-        {ok, {_Value, {DT1, GST1}}} ->
+        {ok, {_Value, DT1, GST1}} ->
             DT2 = max(DT1, DT0),
             GST2 = max(GST1, GST0),
             true = ets:insert(Clocks, {Id, {GST2, DT2}}),

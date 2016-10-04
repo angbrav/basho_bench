@@ -24,7 +24,6 @@
 
 new(Id) ->
     Nodes = basho_bench_config:get(saturn_dc_nodes),
-    [Receiver] = basho_bench_config:get(saturn_dc_receiver),
     Correlation = basho_bench_config:get(saturn_correlation),
     MyNode = basho_bench_config:get(saturn_mynode),
     MyDc = basho_bench_config:get(saturn_dc_id),
@@ -57,7 +56,7 @@ new(Id) ->
     Cookie = basho_bench_config:get(saturn_cookie),
     true = erlang:set_cookie(node(), Cookie),
 
-    ok = ping_each([Receiver|Nodes]),
+    ok = ping_each(Nodes),
 
     case Id of
         1 ->

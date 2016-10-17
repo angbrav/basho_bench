@@ -30,6 +30,7 @@ new(Id) ->
     MyDc = basho_bench_config:get(saturn_dc_id),
     BucketsFileName = basho_bench_config:get(saturn_buckets_file),
     TreeFileName = basho_bench_config:get(saturn_tree_file),
+    NumberDcsConfig = basho_bench_config:get(saturn_number_dcs),
 
     {ok, BucketsFile} = file:open(BucketsFileName, [read]),
     Name = list_to_atom(integer_to_list(Id) ++ atom_to_list(buckets)),
@@ -61,7 +62,7 @@ new(Id) ->
             ok = rpc:call(Node, saturn_leaf, clean, []),
             case Correlation of
                 full ->
-                    ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcs) - 2)], NumberKeys]);
+                    ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcsConfig) - 2)], NumberKeys]);
                 _ ->
                     noop
                     %ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
@@ -80,7 +81,7 @@ new(Id) ->
                    local_buckets=LocalBuckets,
                    remote_buckets=RemoteBuckets,
                    ordered_latencies=LatenciesOrdered,
-                   total_dcs=NumberDcs,
+                   total_dcs=NumberDcsConfig,
                    buckets_map=BucketsMap,
                    id=Id},
     %lager:info("Worker ~p state: ~p", [Id, State]),

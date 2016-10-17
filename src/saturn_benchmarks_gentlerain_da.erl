@@ -89,12 +89,7 @@ new(Id) ->
                    id=Id},
     %lager:info("Worker ~p state: ~p", [Id, State]),
     %lager:info("Worker ~p latencies: ~p", [Id, LatenciesOrdered]),
-    case lists:member(BucketFull, LocalBuckets) of
-        true ->
-            {ok, State};
-        false ->
-            {error, no_local}
-    end.
+    {ok, State}.
 
 get_tree_from_file(Device, MyDc, Counter, OrderedList) ->
     case file:read_line(Device) of

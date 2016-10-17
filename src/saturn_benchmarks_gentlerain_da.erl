@@ -31,7 +31,6 @@ new(Id) ->
     MyDc = basho_bench_config:get(saturn_dc_id),
     BucketsFileName = basho_bench_config:get(saturn_buckets_file),
     TreeFileName = basho_bench_config:get(saturn_tree_file),
-    NumberDcsConfig = basho_bench_config:get(saturn_number_dcs),
     BucketFull = basho_bench_config:get(saturn_bucket_full),
 
     {ok, BucketsFile} = file:open(BucketsFileName, [read]),
@@ -64,7 +63,8 @@ new(Id) ->
             ok = rpc:call(Node, saturn_leaf, clean, []),
             case Correlation of
                 full ->
-                    ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcsConfig) - 2)], NumberKeys]);
+                    noop;
+                    %ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcs) - 2)], NumberKeys]);
                 _ ->
                     noop
                     %ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
@@ -83,13 +83,18 @@ new(Id) ->
                    local_buckets=LocalBuckets,
                    remote_buckets=RemoteBuckets,
                    ordered_latencies=LatenciesOrdered,
-                   total_dcs=NumberDcsConfig,
+                   total_dcs=NumberDcs,
                    buckets_map=BucketsMap,
                    bucket_full=BucketFull,
                    id=Id},
     %lager:info("Worker ~p state: ~p", [Id, State]),
     %lager:info("Worker ~p latencies: ~p", [Id, LatenciesOrdered]),
-    {ok, State}.
+    case lists:member(BucketFull, LocalBuckets) of
+        true ->
+            {ok, State};
+        false ->
+            {error, no_local}
+    end.
 
 get_tree_from_file(Device, MyDc, Counter, OrderedList) ->
     case file:read_line(Device) of

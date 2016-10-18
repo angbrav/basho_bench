@@ -17,6 +17,7 @@
                 total_dcs,
                 remote_tx,
                 key_tx,
+                bucket_full,
                 buckets_map}).
 
 %% ====================================================================
@@ -33,6 +34,7 @@ new(Id) ->
     TreeFileName = basho_bench_config:get(saturn_tree_file),
     RemoteTx = basho_bench_config:get(saturntx_remote_percentage),
     KeyTx = basho_bench_config:get(saturntx_n_key),
+    BucketFull =  basho_bench_config:get(saturn_bucket_full),
 
     {ok, BucketsFile} = file:open(BucketsFileName, [read]),
     Name = list_to_atom(integer_to_list(Id) ++ atom_to_list(buckets)),
@@ -79,6 +81,7 @@ new(Id) ->
                    ordered_latencies=LatenciesOrdered,
                    total_dcs=NumberDcs,
                    buckets_map=BucketsMap,
+                   bucket_full=BucketFull,
                    id=Id},
     %lager:info("Worker ~p state: ~p", [Id, State]),
     %lager:info("Worker ~p latencies: ~p", [Id, LatenciesOrdered]),
@@ -247,18 +250,21 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
                                      local_buckets=LocalBuckets,
                                      ordered_latencies=OrderedLatencies,
                                      buckets_map=BucketsMap,
+                                     bucket_full=BucketFull,
                                      mydc=MyDc,
                                      total_dcs=NumberDcs}=S0) ->
     {ok, Bucket} = case Correlation of
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
         full ->
-            {ok, trunc(math:pow(2, NumberDcs) - 2)};
+            {ok, BucketFull};
+            %{ok, trunc(math:pow(2, NumberDcs) - 2)};
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
     %Key = random:uniform(NumberKeys),
     BKey = {Bucket, KeyGen()},
+    lager:info("Buckt being used: ~p", [Bucket]),
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     case Result of
@@ -331,12 +337,14 @@ run(update, KeyGen, ValueGen, #state{node=Node,
                                       buckets_map=BucketsMap,
                                       mydc=MyDc,
                                       total_dcs=NumberDcs,
+                                      bucket_full=BucketFull,
                                       local_buckets=LocalBuckets}=S0) ->
     {ok, Bucket} = case Correlation of
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
         full ->
-            {ok, trunc(math:pow(2, NumberDcs) - 2)};
+            %{ok, trunc(math:pow(2, NumberDcs) - 2)};
+            {ok, BucketFull};
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,

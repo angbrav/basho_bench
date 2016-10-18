@@ -264,7 +264,7 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
     end,
     %Key = random:uniform(NumberKeys),
     BKey = {Bucket, KeyGen()},
-    lager:info("Buckt being used: ~p", [Bucket]),
+    %lager:info("Buckt being used: ~p", [Bucket]),
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     case Result of

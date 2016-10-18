@@ -15,6 +15,7 @@
                 remote_buckets,
                 ordered_latencies,
                 total_dcs,
+                bucket_full,
                 buckets_map}).
 
 %% ====================================================================
@@ -29,6 +30,7 @@ new(Id) ->
     MyDc = basho_bench_config:get(saturn_dc_id),
     BucketsFileName = basho_bench_config:get(saturn_buckets_file),
     TreeFileName = basho_bench_config:get(saturn_tree_file),
+    BucketFull = basho_bench_config:get(saturn_bucket_full),
 
     {ok, BucketsFile} = file:open(BucketsFileName, [read]),
     Name = list_to_atom(integer_to_list(Id) ++ atom_to_list(buckets)),
@@ -60,7 +62,8 @@ new(Id) ->
             ok = rpc:call(Node, saturn_leaf, clean, []),
             case Correlation of
                 full ->
-                    ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcs) - 2)], NumberKeys]);
+                    noop;
+                    %ok = rpc:call(Node, saturn_leaf, init_store, [[trunc(math:pow(2, NumberDcs) - 2)], NumberKeys]);
                 _ ->
                     noop
                     %ok = rpc:call(Node, saturn_leaf, init_store, [LocalBuckets, NumberKeys])
@@ -78,6 +81,7 @@ new(Id) ->
                    local_buckets=LocalBuckets,
                    remote_buckets=RemoteBuckets,
                    ordered_latencies=LatenciesOrdered,
+                   bucket_full=BucketFull,
                    total_dcs=NumberDcs,
                    buckets_map=BucketsMap,
                    id=Id},
@@ -208,13 +212,15 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
                                      local_buckets=LocalBuckets,
                                      ordered_latencies=OrderedLatencies,
                                      buckets_map=BucketsMap,
+                                     bucket_full=BucketFull,
                                      mydc=MyDc,
                                      total_dcs=NumberDcs}=S0) ->
     {ok, Bucket} = case Correlation of
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
         full ->
-            {ok, trunc(math:pow(2, NumberDcs) - 2)};
+            {ok, BucketFull};
+            %{ok, trunc(math:pow(2, NumberDcs) - 2)};
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,
@@ -272,6 +278,7 @@ run(update, KeyGen, ValueGen, #state{node=Node,
                                       correlation=Correlation,
                                       ordered_latencies=OrderedLatencies,
                                       buckets_map=BucketsMap,
+                                      bucket_full=BucketFull,
                                       mydc=MyDc,
                                       total_dcs=NumberDcs,
                                       local_buckets=LocalBuckets}=S0) ->
@@ -279,7 +286,8 @@ run(update, KeyGen, ValueGen, #state{node=Node,
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
         full ->
-            {ok, trunc(math:pow(2, NumberDcs) - 2)};
+            {ok, BucketFull};
+            %{ok, trunc(math:pow(2, NumberDcs) - 2)};
         _ ->
             pick_local_bucket(Correlation, OrderedLatencies, MyDc, NumberDcs, BucketsMap)
     end,

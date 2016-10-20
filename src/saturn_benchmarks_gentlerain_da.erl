@@ -219,6 +219,17 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
                                      bucket_full=BucketFull,
                                      total_dcs=NumberDcs}=S0) ->
     {ok, Bucket} = case Correlation of
+        special ->
+            case MyDc of
+                0 ->
+                    {ok, 4};
+                1 ->
+                    {ok, 4};
+                2 ->
+                    {ok, 9};
+                3 ->
+                    {ok, 9}
+            end;
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
         full ->
@@ -287,6 +298,17 @@ run(update, KeyGen, ValueGen, #state{node=Node,
                                       bucket_full=BucketFull,
                                       local_buckets=LocalBuckets}=S0) ->
     {ok, Bucket} = case Correlation of
+        special ->
+            case MyDc of
+                0 ->
+                    {ok, 4};
+                1 ->
+                    {ok, 4};
+                2 ->
+                    {ok, 9};
+                3 ->
+                    {ok, 9}
+            end;
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
         full ->

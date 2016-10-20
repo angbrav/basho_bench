@@ -1,4 +1,4 @@
--module(saturn_benchmarks_gentlerain_da).
+-module(saturn_benchmarks_gentlerain_partial_da).
 
 -export([new/1,
          run/4]).

@@ -8,7 +8,7 @@ nodes=`cat ./scripts/bench`
 config=`cat ./scripts/config`
 for node in $nodes
 do
-    Command1="cd ./basho_bench && sudo sed -i -e \"s/$1./\" examples/$config"
+    Command1="cd ./basho_bench && sudo sed -i -e \"s#$1.#\" examples/$config"
     ssh -o ConnectTimeout=10 -t ubuntu@$node -i /Users/bravogestoso/Projects/ec2-saturn ${Command1/localhost/$node} &
 done
 echo $Command1 done

@@ -1,22 +1,20 @@
 #ol!/bin/bash
 
+if [ $1 == "init" ]
+then
+    ./scripts/init_bench.sh
+fi
+
 #Duration=$1
 #Value=$2
-#Correlation=$3
 #Keys=$4
-#Update=$5
-#UpdateRemote=$6
-#Read=$7
-#ReadRemote=$8
 #Clients=$9
 #Driver=${10}
-#ReadTx=${11}
-#NKeysTx=${12}
-#TxRemote=${13}
-#WriteTx=${14}
 #KeyDistribution=${15}
+#masters file
+#friends file
 
-./scripts/conf_bench.sh 1 2 uniform 10000 1 0 99 0 1 saturn_benchmarks_da 0 0 0 0 uniform_int
+./scripts/conf_bench_fb.sh 3 2 10000 1 saturn_complex_gentlerain_rpc uniform_int masters_facebook_237.txt friends_facebook_237.txt
 
 Counter=0
 nodes=`cat ./scripts/bench`
@@ -36,8 +34,8 @@ do
 done
 
 Command1="sudo /usr/sbin/ntpdate -b ntp.ubuntu.com"
-#./scripts/parallel_command_all.sh "$Command1"
+./scripts/parallel_command_all.sh "$Command1"
 
-Command2="cd ./basho_bench && sudo ./basho_bench examples/saturn_benchmarks_rpc.config"
+Command2="cd ./basho_bench && sudo ./basho_bench examples/saturn_complex_rpc.config"
 
-#./scripts/parallel_command.sh bench "$Command2"
+./scripts/parallel_command.sh bench "$Command2"

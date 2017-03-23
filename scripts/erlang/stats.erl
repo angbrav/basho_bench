@@ -3,6 +3,7 @@
          cdf/1,
          cdf_converger/1,
          cdf_producer/1,
+         average/1,
          cdf_eventual/1,
          cdf_internal/1,
          get_balancing/1,
@@ -36,6 +37,14 @@ cdf_eventual([LeafString, FromString, TypeString | Leafs]) ->
     NodeName=list_to_atom("leafs"++integer_to_list(Leaf+1)++"@"++Node),
     {ok, Data} = rpc:call(NodeName, saturn_leaf, collect_stats, [From, list_to_atom(TypeString)]),
     io:format("From ~p to ~p (~p): ~p\n", [From, Leaf, TypeString, Data]).
+
+average(Leafs) ->
+    {Sum, Total, _} = lists:foldl(fun(Node, {Sum0, Total0, Counter}) ->
+                                    NodeName=list_to_atom("leafs"++integer_to_list(Counter)++"@"++Node),
+                                    {ok, {Sum1, Total1}} = rpc:call(NodeName, saturn_leaf, staleness_average, []),
+                                    {Sum0+Sum1, Total0+Total1, Counter+1}
+                                  end, {0, 0, 1}, Leafs),
+    io:format("Average staleness: ~p\n", [Sum/Total]).
 
 cdf_converger([LeafString, FromString, TypeString | Leafs]) ->
     Leaf = list_to_integer(LeafString),

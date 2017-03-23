@@ -3,22 +3,26 @@
 set -u
 set -e
 FAIL=0
-command="updaloading: $1"
+command="setting tree to: $1"
 leafs=`cat ./scripts/leafs`
 internals=`cat ./scripts/internals`
-config="data/manager/$1"
+receivers=`cat ./scripts/receivers`
+Command2="cd ./saturn_leaf && sudo sed -i -e 's#-define(FROM_TO_DELAY.*#-define(FROM_TO_DELAY, {$1, $2, $3}).#' include/saturn_leaf.hrl"
 echo $command" for leafs:"$leafs 
 for node in $leafs
 do
-    scp -o ConnectTimeout=10 -i /Users/bravogestoso/Projects/ec2-saturn files/saturn/"$1" ubuntu@$node:saturn_leaf/rel/files/manager/ & 
-    Command2="cd ./saturn_leaf && sudo sed -i -e 's#{tree.*#{tree, \"$config\"},#' src/saturn_leaf.app.src"
     ssh -o ConnectTimeout=10 -t ubuntu@$node -i /Users/bravogestoso/Projects/ec2-saturn ${Command2/localhost/$node} &
 done
+echo $command done
 echo $command" for internals:"$internals 
 for node in $internals
 do
-    scp -o ConnectTimeout=10 -i /Users/bravogestoso/Projects/ec2-saturn files/saturn/"$1" ubuntu@$node:saturn_leaf/rel/files/manager/ & 
-    Command2="cd ./saturn_leaf && sudo sed -i -e 's#{tree.*#{tree, \"$config\"},#' src/saturn_leaf.app.src"
+    ssh -o ConnectTimeout=10 -t ubuntu@$node -i /Users/bravogestoso/Projects/ec2-saturn ${Command2/localhost/$node} &
+done
+echo $command done
+echo $command" for receivers:"$receivers 
+for node in $receivers
+do
     ssh -o ConnectTimeout=10 -t ubuntu@$node -i /Users/bravogestoso/Projects/ec2-saturn ${Command2/localhost/$node} &
 done
 echo $command done

@@ -10,7 +10,7 @@ else
     Folder="current"
 fi
 Nodes=`cat ./scripts/bench`
-Folder=`date +"%H%M%S_%d%m%y"`
+Folder=`date +"%d%m%y_%H%M%S"`
 mkdir ./results/$Folder
 for node in $Nodes
 do

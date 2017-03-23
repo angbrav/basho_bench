@@ -7,6 +7,7 @@ command="$1"
 
 leafs=`cat ./scripts/leafs`
 internals=`cat ./scripts/internals`
+receivers=`cat ./scripts/receivers`
 echo $command" for leafs:"$leafs 
 for node in $leafs
 do
@@ -14,6 +15,11 @@ do
 done
 echo $command" for internals:"$internals 
 for node in $internals
+do
+    ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -t ubuntu@$node -i /Users/bravogestoso/Projects/ec2-saturn ${command/localhost/$node} &
+done
+echo $command" for receivers:"$receivers 
+for node in $receivers
 do
     ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -t ubuntu@$node -i /Users/bravogestoso/Projects/ec2-saturn ${command/localhost/$node} &
 done

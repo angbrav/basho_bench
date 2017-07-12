@@ -283,8 +283,10 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     case Result of
+        {ok, {_Value, 0}} ->
+            {ok, S0};
         {ok, {_Value, TimeStamp}} ->
-            lager:info("Update completed with timestamp: ~p", [TimeStamp]),
+            %lager:info("Read completed with timestamp: ~p", [TimeStamp]),
             Clock1 = compute_max(dict:to_list(TimeStamp), Clock0, dict:new()),
             {ok, S0#state{clock=Clock1}};
         Else ->
@@ -312,6 +314,8 @@ run(remote_read, KeyGen, _ValueGen, #state{node=Node,
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     %Result = rpc:call(Node, saturn_leaf, read, [BKey, Clock0]),
     case Result of
+        {ok, {_Value, 0}} ->
+            {ok, S0};
         {ok, {_Value, TimeStamp}} ->
             Clock1 = compute_max(dict:to_list(TimeStamp), Clock0, dict:new()),
             {ok, S0#state{clock=Clock1}};

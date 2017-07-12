@@ -284,6 +284,7 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
     Result = gen_server:call(server_name(Node), {read, BKey, Clock0}, infinity),
     case Result of
         {ok, {_Value, TimeStamp}} ->
+            lager:info("Update completed with timestamp: ~p", [TimeStamp]),
             Clock1 = compute_max(dict:to_list(TimeStamp), Clock0, dict:new()),
             {ok, S0#state{clock=Clock1}};
         Else ->

@@ -263,9 +263,9 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
                 0 ->
                     {ok, 14};
                 1 ->
-                    {ok, 10};
-                2 ->
                     {ok, 14};
+                2 ->
+                    {ok, 10};
                 3 ->
                     {ok, 14}
             end;
@@ -339,9 +339,9 @@ run(update, KeyGen, ValueGen, #state{node=Node,
                 0 ->
                     {ok, 10};
                 1 ->
-                    {ok, 14};
-                2 ->
                     {ok, 10};
+                2 ->
+                    {ok, 14};
                 3 ->
                     {ok, 14}
             end;

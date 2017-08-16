@@ -261,13 +261,13 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
         special ->
             case MyDc of
                 0 ->
-                    {ok, 7};
+                    {ok, 14};
                 1 ->
-                    {ok, 5};
+                    {ok, 14};
                 2 ->
-                    {ok, 11};
+                    {ok, 10};
                 3 ->
-                    {ok, 10}
+                    {ok, 14}
             end;
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
@@ -337,13 +337,13 @@ run(update, KeyGen, ValueGen, #state{node=Node,
         special ->
             case MyDc of
                 0 ->
-                    {ok, 7};
+                    {ok, 10};
                 1 ->
-                    {ok, 5};
+                    {ok, 10};
                 2 ->
-                    {ok, 11};
+                    {ok, 14};
                 3 ->
-                    {ok, 10}
+                    {ok, 14}
             end;
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);

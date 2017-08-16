@@ -261,11 +261,11 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
         special ->
             case MyDc of
                 0 ->
-                    {ok, 14};
+                    {ok, 3};
                 1 ->
-                    {ok, 10};
+                    {ok, 3};
                 2 ->
-                    {ok, 14};
+                    {ok, 4};
                 3 ->
                     {ok, 14}
             end;
@@ -337,11 +337,11 @@ run(update, KeyGen, ValueGen, #state{node=Node,
         special ->
             case MyDc of
                 0 ->
-                    {ok, 10};
+                    {ok, 3};
                 1 ->
-                    {ok, 14};
+                    {ok, 5};
                 2 ->
-                    {ok, 10};
+                    {ok, 4};
                 3 ->
                     {ok, 14}
             end;

@@ -332,7 +332,7 @@ run(update, KeyGen, ValueGen, #state{node=Node,
     {ok, Bucket} = case Correlation of
         special ->
             case MyDc of
-                1 ->
+                4 ->
                     {ok, 119};
                 _ ->
                     {ok, 126}

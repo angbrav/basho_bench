@@ -261,19 +261,19 @@ run(read, KeyGen, _ValueGen, #state{node=Node,
         special ->
             case MyDc of
                 0 ->
-                    {ok, 9};
+                    pick_local_bucket(uniform, LocalBuckets);
                 1 ->
-                    {ok, 1};
+                    pick_local_bucket(uniform, LocalBuckets);
                 2 ->
-                    {ok, 2};
+                    pick_local_bucket(uniform, LocalBuckets);
                 3 ->
                     {ok, 9};
                 4 ->
-                    {ok, 4};
+                    pick_local_bucket(uniform, LocalBuckets);
                 5 ->
-                    {ok, 5};
+                    pick_local_bucket(uniform, LocalBuckets);
                 6 ->
-                    {ok, 12}
+                    pick_local_bucket(uniform, LocalBuckets)
             end;
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
@@ -345,17 +345,17 @@ run(update, KeyGen, ValueGen, #state{node=Node,
                 0 ->
                     {ok, 9};
                 1 ->
-                    {ok, 1};
+                    pick_local_bucket(uniform, LocalBuckets);
                 2 ->
-                    {ok, 2};
+                    pick_local_bucket(uniform, LocalBuckets);
                 3 ->
                     {ok, 24};
                 4 ->
-                    {ok, 4};
+                    pick_local_bucket(uniform, LocalBuckets);
                 5 ->
-                    {ok, 5};
+                    pick_local_bucket(uniform, LocalBuckets);
                 6 ->
-                    {ok, 12}
+                    pick_local_bucket(uniform, LocalBuckets)
             end;
         uniform ->
             pick_local_bucket(uniform, LocalBuckets);
